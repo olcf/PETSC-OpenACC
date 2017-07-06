@@ -114,10 +114,6 @@ PetscErrorCode generateA(const DM &grid, Mat &A)
                         dy,
                         dz;
 
-    PetscScalar         Cx,
-                        Cy,
-                        Cz;
-
     ISLocalToGlobalMapping  mapping;
 
     MatStencil          s[7];
