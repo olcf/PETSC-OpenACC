@@ -3,34 +3,47 @@
 # Pi-Yueh Chuang, 2017-07-06 12:39
 #
 
-CCompiler = cc
-CXXCompiler = CC
-
 SRCDIR = ./src
 OBJDIR = ./obj
 BINDIR = ./bin
 
-CFLAGS = -craype-verbose
-CXXFLAGS = -std=c++11 -craype-verbose
+CFLAGS = -mp -craype-verbose
+CXXFLAGS = -mp -std=c++11 -craype-verbose
 LDFLAGS = -mp -craype-verbose
 
+SCOREP_WRAPPER_INSTRUMENTER_FLAGS = --static --thread=none --mpp=mpi \
+									--mutex=none --compiler --nocuda \
+									--noonline-access --nopomp --noopenmp \
+									--preprocess --noopencl --noopenacc --memory
 
-.PHONY: all clean check-dir
-
-
-all: petsc-ksp
-
-
-petsc-ksp: check-dir ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
-	${CXXCompiler} ${LDFLAGS} -o ${BINDIR}/$@ ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
+SCOREP_WRAPPER_COMPILER_FLAGS = -w
 
 
-${OBJDIR}/%.o: ${SRCDIR}/%.c
-	${CCompiler} -c -mp ${CFLAGS} -o $@ $<
+.PHONY: all clean check-dir petsc-ksp petsc-ksp-scorep run-petsc-ksp-single-node-scaling
+
+
+all: petsc-ksp petsc-ksp-scorep
+petsc-ksp: check-dir ${BINDIR}/petsc-ksp
+petsc-ksp-scorep: check-dir ${BINDIR}/petsc-ksp-scorep
+
+run-petsc-ksp-single-node-scaling:
+	qsub runs/petsc-ksp-single-node-scaling.pbs
+
+
+${BINDIR}/petsc-ksp: ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
+	CC ${LDFLAGS} -o $@ $^
+
+
+${BINDIR}/petsc-ksp-scorep: ${OBJDIR}/helper.scorep.o ${OBJDIR}/main_ksp.scorep.o
+	scorep-CC ${LDFLAGS} -o $@ $^
 
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
-	${CXXCompiler} -c -std=c++11 -mp ${CXXFLAGS} -o $@ $<
+	CC -c ${CXXFLAGS} -o $@ $<
+
+
+${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
+	scorep-CC -c ${CXXFLAGS} -o $@ $<
 
 
 check-dir:
