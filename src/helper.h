@@ -16,6 +16,39 @@
 
 
 /**
+ * \brief create the whole linear system A * lhs = rhs for the Poisson problem.
+ *
+ * \param Nx [in] the number of cells in x direction.
+ * \param Ny [in] the number of cells in y direction.
+ * \param Nz [in] the number of cells in z direction.
+ * \param da [out] DMDA object.
+ * \param A [out] coefficient matrix.
+ * \param lhs [out] left-hand-side vector.
+ * \param rhs [out] right-hand-side vector.
+ * \param exact [out] exact solution vector.
+ *
+ * \return PetscErrorCode.
+ */
+PetscErrorCode createSystem(
+        const PetscInt &Nx, const PetscInt &Ny, const PetscInt &Nz,
+        DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
+
+
+/**
+ * \brief destroy the underlying data and unlink pointer of the linear system.
+ *
+ * \param da [in, out] DMDA object.
+ * \param A [in, out] coefficient matrix.
+ * \param lhs [in, out] left-hand-side vector.
+ * \param rhs [in, out] right-hand-side vector.
+ * \param exact [in, out] exact solution vector.
+ *
+ * \return PetscErrorCode.
+ */
+PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
+
+
+/**
  * \brief assign values to right-hand-side Vec.
  *
  * \param grid [in] a DMDA object representing the grid.

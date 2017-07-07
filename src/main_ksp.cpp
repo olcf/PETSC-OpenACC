@@ -20,6 +20,7 @@
 
 
 // PETSc
+# include <petsctime.h>
 # include <petscsys.h>
 # include <petscmat.h>
 # include <petscvec.h>
@@ -56,13 +57,18 @@ int main(int argc, char **argv)
     PetscReal           res,        // final residual
                         Linf;       // maximum norm
 
+    PetscLogDouble      start,      // time at the begining
+                        initSys,    // time after init the sys
+                        initSolver, // time after init the solver
+                        solve;      // time after solve
+
     char                config[PETSC_MAX_PATH_LEN]; // config file name
 
 
 
-    // initialize PETSc and MPI
+    // initialize MPI and PETSc
+    ierr = MPI_Init(&argc, &argv); CHKERRQ(ierr);
     ierr = PetscInitialize(&argc, &argv, nullptr, nullptr); CHKERRQ(ierr);
-
 
     // allow PETSc to read run-time options from a file
     ierr = PetscOptionsGetString(nullptr, nullptr, "-config",
@@ -70,37 +76,17 @@ int main(int argc, char **argv)
     ierr = PetscOptionsInsertFile(PETSC_COMM_WORLD,
             nullptr, config, PETSC_FALSE); CHKERRQ(ierr);
 
+    // get time
+    ierr = PetscTime(&start); CHKERRQ(ierr);
 
-    // create DMDA object
-    ierr = DMDACreate3d(PETSC_COMM_WORLD, 
-            DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
-            DMDA_STENCIL_STAR, 
-            Nx, Ny, Nz,
-            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
-            1, 1, nullptr, nullptr, nullptr, &da); CHKERRQ(ierr);
+    // prepare the linear system
+    ierr = createSystem(Nx, Ny, Nz, da, A, lhs, rhs, exact); CHKERRQ(ierr);
 
-    // force to use AIJ format
-    ierr = DMSetMatType(da, MATAIJ); CHKERRQ(ierr);
-
-    // get partitioning info
+    // get system info
     ierr = DMDAGetLocalInfo(da, &info); CHKERRQ(ierr);
 
-
-    // create vectors and matrix
-    ierr = DMCreateGlobalVector(da, &lhs); CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(da, &rhs); CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(da, &exact); CHKERRQ(ierr);
-    ierr = DMCreateMatrix(da, &A); CHKERRQ(ierr);
-
-
-    // setup the system: RHS, matrix A, and exact solution
-    ierr = generateRHS(da, rhs); CHKERRQ(ierr);
-    ierr = generateExt(da, exact); CHKERRQ(ierr);
-    ierr = generateA(da, A); CHKERRQ(ierr);
-
-    // handle the issue of all-Neumann BC matrix
-    ierr = setRefPoint(A, rhs, exact); CHKERRQ(ierr);
-
+    // get time
+    ierr = PetscTime(&initSys); CHKERRQ(ierr);
 
     // create a solver
     ierr = KSPCreate(PETSC_COMM_WORLD, &ksp); CHKERRQ(ierr);
@@ -108,13 +94,18 @@ int main(int argc, char **argv)
     ierr = KSPSetType(ksp, KSPCG); CHKERRQ(ierr);
     ierr = KSPSetReusePreconditioner(ksp, PETSC_TRUE); CHKERRQ(ierr);
     ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+    ierr = KSPSetUp(ksp); CHKERRQ(ierr);
 
+    // get time
+    ierr = PetscTime(&initSolver); CHKERRQ(ierr);
 
-    // solve
-    ierr = VecSet(lhs, 0.0); CHKERRQ(ierr);
+    // solve the system
     ierr = KSPSolve(ksp, rhs, lhs); CHKERRQ(ierr);
 
-    // check if the solve converged
+    // get time
+    ierr = PetscTime(&solve); CHKERRQ(ierr);
+
+    // check if the solver converged
     ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
     if (reason < 0) SETERRQ1(PETSC_COMM_WORLD,
             PETSC_ERR_CONV_FAILED, "Diverger reason: %d\n", reason);
@@ -129,25 +120,23 @@ int main(int argc, char **argv)
     ierr = VecAXPY(lhs, -1.0, exact); CHKERRQ(ierr);
     ierr = VecNorm(lhs, NORM_INFINITY, &Linf); CHKERRQ(ierr);
 
-
     // print result
     ierr = PetscPrintf(PETSC_COMM_WORLD,
             "[Nx, Ny, Nz]: [%d, %d, %d]\n" "Number of iterations: %d\n"
-            "L2 norm of final residual: %f\n" "Maximum norm of error: %f\n",
-            info.mx, info.my, info.mz, Niters, res, Linf); CHKERRQ(ierr);
+            "L2 norm of final residual: %f\n" "Maximum norm of error: %f\n"
+            "Time [init, create solver, solve]: [%f, %f, %f]\n",
+            info.mx, info.my, info.mz, Niters, res, Linf,
+            initSys-start, initSolver-initSys, solve-initSolver); CHKERRQ(ierr);
 
-
-    // destroy PETSc objects
+    // destroy KSP solver
     ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
-    ierr = MatDestroy(&A); CHKERRQ(ierr);
-    ierr = VecDestroy(&lhs); CHKERRQ(ierr);
-    ierr = VecDestroy(&rhs); CHKERRQ(ierr);
-    ierr = VecDestroy(&exact); CHKERRQ(ierr);
 
+    // destroy the linear system
+    ierr = destroySystem(da, A, lhs, rhs, exact); CHKERRQ(ierr);
 
-    // finalize PETSc
+    // finalize PETSc and MPI
     ierr = PetscFinalize(); CHKERRQ(ierr);
+    ierr = MPI_Finalize(); CHKERRQ(ierr);
 
     return 0;
 }

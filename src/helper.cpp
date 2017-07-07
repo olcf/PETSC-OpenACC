@@ -18,6 +18,62 @@
 # define c2 -3.0*c1*c1
 
 
+// wrapper for creating the whole linear system
+PetscErrorCode createSystem(
+        const PetscInt &Nx, const PetscInt &Ny, const PetscInt &Nz,
+        DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact)
+{
+    PetscFunctionBeginUser;
+
+    PetscErrorCode      ierr;
+
+    // create DMDA object
+    ierr = DMDACreate3d(PETSC_COMM_WORLD, 
+            DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+            DMDA_STENCIL_STAR, 
+            Nx, Ny, Nz,
+            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
+            1, 1, nullptr, nullptr, nullptr, &da); CHKERRQ(ierr);
+
+    // force to use AIJ format
+    ierr = DMSetMatType(da, MATAIJ); CHKERRQ(ierr);
+
+    // create vectors and matrix
+    ierr = DMCreateGlobalVector(da, &lhs); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da, &rhs); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da, &exact); CHKERRQ(ierr);
+    ierr = DMCreateMatrix(da, &A); CHKERRQ(ierr);
+
+    // setup the system: RHS, matrix A, and exact solution; also initialize LHS with zeros
+    ierr = VecSet(lhs, 0.0); CHKERRQ(ierr);
+    ierr = generateRHS(da, rhs); CHKERRQ(ierr);
+    ierr = generateExt(da, exact); CHKERRQ(ierr);
+    ierr = generateA(da, A); CHKERRQ(ierr);
+
+    // handle the issue of all-Neumann BC matrix
+    ierr = setRefPoint(A, rhs, exact); CHKERRQ(ierr);
+
+    PetscFunctionReturn(0);
+}
+
+
+// destroy the linear system
+PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact)
+{
+    PetscFunctionBeginUser;
+
+    PetscErrorCode      ierr;
+
+    ierr = VecDestroy(&exact); CHKERRQ(ierr);
+    ierr = VecDestroy(&rhs); CHKERRQ(ierr);
+    ierr = VecDestroy(&lhs); CHKERRQ(ierr);
+    ierr = MatDestroy(&A); CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
+
+    PetscFunctionReturn(0);
+}
+
+
 // definition of 3D-version generateRHS
 PetscErrorCode generateRHS(const DM &grid, Vec &rhs)
 {
