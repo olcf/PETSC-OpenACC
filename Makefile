@@ -19,15 +19,21 @@ SCOREP_WRAPPER_INSTRUMENTER_FLAGS = --static --thread=none --mpp=mpi \
 SCOREP_WRAPPER_COMPILER_FLAGS = -w
 
 
-.PHONY: all clean check-dir petsc-ksp petsc-ksp-scorep run-petsc-ksp-single-node-scaling
+.PHONY: all clean check-dir petsc-ksp petsc-ksp-scorep \
+	run-petsc-ksp-single-node-scaling \
+	run-petsc-ksp-single-node-profiling
 
 
 all: petsc-ksp petsc-ksp-scorep
 petsc-ksp: check-dir ${BINDIR}/petsc-ksp
 petsc-ksp-scorep: check-dir ${BINDIR}/petsc-ksp-scorep
 
+
 run-petsc-ksp-single-node-scaling:
 	qsub runs/petsc-ksp-single-node-scaling.pbs
+
+run-petsc-ksp-single-node-profiling:
+	qsub runs/petsc-ksp-single-node-profiling.pbs
 
 
 ${BINDIR}/petsc-ksp: ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
