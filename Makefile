@@ -21,6 +21,7 @@ SCOREP_WRAPPER_COMPILER_FLAGS = -w
 
 .PHONY: all clean check-dir petsc-ksp petsc-ksp-scorep \
 	run-petsc-ksp-single-node-scaling \
+	run-petsc-ksp-multiple-node-scaling \
 	run-petsc-ksp-single-node-profiling
 
 
@@ -31,6 +32,11 @@ petsc-ksp-scorep: check-dir ${BINDIR}/petsc-ksp-scorep
 
 run-petsc-ksp-single-node-scaling:
 	qsub runs/petsc-ksp-single-node-scaling.pbs
+
+
+run-petsc-ksp-multiple-node-scaling:
+	qsub runs/petsc-ksp-multiple-node-scaling.pbs
+
 
 run-petsc-ksp-single-node-profiling:
 	qsub runs/petsc-ksp-single-node-profiling.pbs
