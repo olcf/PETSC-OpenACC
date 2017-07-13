@@ -138,5 +138,5 @@ int main(int argc, char **argv)
     ierr = PetscFinalize(); CHKERRQ(ierr);
     ierr = MPI_Finalize(); CHKERRQ(ierr);
 
-    return 0;
+    return ierr;
 }

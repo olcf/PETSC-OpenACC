@@ -53,7 +53,7 @@ PetscErrorCode createSystem(
     // handle the issue of all-Neumann BC matrix
     ierr = setRefPoint(A, rhs, exact); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 
@@ -70,7 +70,7 @@ PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact)
     ierr = MatDestroy(&A); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 
@@ -112,7 +112,7 @@ PetscErrorCode generateRHS(const DM &grid, Vec &rhs)
     // return the control back to RHS Vec
     ierr = DMDAVecRestoreArray(grid, rhs, &rhs_arry); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 
@@ -153,7 +153,7 @@ PetscErrorCode generateExt(const DM &grid, Vec &exact)
     // return the control back to the exact solution Vec
     ierr = DMDAVecRestoreArray(grid, exact, &exact_arry); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 
@@ -242,7 +242,7 @@ PetscErrorCode generateA(const DM &grid, Mat &A)
     ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 
@@ -275,5 +275,5 @@ PetscErrorCode setRefPoint(Mat &A, Vec &rhs, const Vec &exact)
 
     ierr = VecDestroy(&diag); CHKERRQ(ierr);
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
