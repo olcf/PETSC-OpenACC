@@ -2,7 +2,7 @@
 
 #PBS -A gen010interns
 #PBS -j oe
-#PBS -l walltime=2:00:00
+#PBS -l walltime=1:00:00
 #PBS -l nodes=1
 #PBS -l gres=atlas1%atlas2
 #PBS -m e
@@ -40,7 +40,8 @@ rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${PBS_JOBID}
 export SCOREP_ENABLE_PROFILING=true
 export SCOREP_ENABLE_UNWINDING=true
-export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@2000000
+export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@200000
+export SCOREP_TOTAL_MEMORY=1024M
 
 # start runs
 echo "Single Node Profiling: petsc-ksp-scorep" > ${LOG}

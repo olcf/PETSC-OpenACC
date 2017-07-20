@@ -36,43 +36,29 @@ cd ${MEMBERWORK}/${PROJ}/${RUN}
 rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJ}
 rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 
-# environment variable for displaying MPI tasks layout
-#export MPICH_RANK_REORDER_DISPLAY=1
-
+# export variables for Score-P
+export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${PBS_JOBID}
+export SCOREP_ENABLE_PROFILING=true
+export SCOREP_ENABLE_UNWINDING=true
+export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@200000
+export SCOREP_TOTAL_MEMORY=1024M
 
 # start runs
-echo "Multiple-Node Strong Scaling: petsc-ksp" > ${LOG}
+echo "Multiple Node Profiling: petsc-ksp-scorep" > ${LOG}
 echo "=======================================" >> ${LOG}
 
-# print date
 date >> ${LOG}
 echo "" >> ${LOG}
 
-# loop through and throw all jobs, let system handle resource distribution
-for i in 1024 512 256 128 64 32 16
-do
-    nohup aprun -n ${i} ${MEMBERWORK}/${PROJ}/bin/petsc-ksp \
-        -da_grid_x 300 \
-        -da_grid_y 300 \
-        -da_grid_z 300 \
-        -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info \
-        > temp-${i}.log 2>&1 &
-done
-
-# wait until all jobs finish
-wait
-
-# loop through all job logs and accumulate them
-for i in 1024 512 256 128 64 32 16
-do
-    echo "${i} Cores" >> ${LOG}
-    echo "--------" >> ${LOG}
-    cat temp-${i}.log >> ${LOG}
-    rm temp-${i}.log
-    echo "" >> ${LOG}
-    echo "" >> ${LOG}
-done
-
+echo "1024 Cores" >> ${LOG}
+echo "--------" >> ${LOG}
+aprun -n 1024 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep \
+    -da_grid_x 500 \
+    -da_grid_y 500 \
+    -da_grid_z 500 \
+    -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
+echo "" >> ${LOG}
+echo "" >> ${LOG}
 
 # sync the results in ${MEMBERWORK}/${PROJ}/${RUN} to ${RUN_PATH}
 rsync -Pravq ${MEMBERWORK}/${PROJ}/${RUN} ${RUN_BASE}

@@ -14,7 +14,8 @@ LDFLAGS = -mp -craype-verbose
 SCOREP_WRAPPER_INSTRUMENTER_FLAGS = --static --thread=none --mpp=mpi \
 									--mutex=none --compiler --nocuda \
 									--noonline-access --nopomp --noopenmp \
-									--preprocess --noopencl --noopenacc --memory
+									--preprocess --noopencl --noopenacc \
+									--memory --verbose
 
 SCOREP_WRAPPER_COMPILER_FLAGS = -w
 
@@ -40,6 +41,10 @@ run-petsc-ksp-multiple-node-scaling:
 
 run-petsc-ksp-single-node-profiling:
 	qsub runs/petsc-ksp-single-node-profiling.pbs
+
+
+run-petsc-ksp-multiple-node-profiling:
+	qsub runs/petsc-ksp-multiple-node-profiling.pbs
 
 
 ${BINDIR}/petsc-ksp: ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
