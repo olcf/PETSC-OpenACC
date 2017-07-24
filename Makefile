@@ -73,6 +73,9 @@ petsc-ksp: check-dir ${BINDIR}/petsc-ksp
 # makeing an executable binary petsc-ksp-scorep
 petsc-ksp-scorep: check-dir ${BINDIR}/petsc-ksp-scorep
 
+# makeing an executable binary petsc-ksp-scorep
+petsc-ksp-pgprof: check-dir ${BINDIR}/petsc-ksp-pgprof
+
 # run a strong scaling test on a single node
 run-petsc-ksp-single-node-scaling:
 	qsub runs/petsc-ksp-single-node-scaling.pbs
@@ -81,31 +84,47 @@ run-petsc-ksp-single-node-scaling:
 run-petsc-ksp-multiple-node-scaling:
 	qsub runs/petsc-ksp-multiple-node-scaling.pbs
 
-# run a profiling run on a single node
-run-petsc-ksp-single-node-profiling:
-	qsub runs/petsc-ksp-single-node-profiling.pbs
+# run a profiling with Score-P on a single node
+run-petsc-ksp-single-node-scorep:
+	qsub runs/petsc-ksp-single-node-scorep.pbs
 
-# run a profiling run on multiple nodes
-run-petsc-ksp-multiple-node-profiling:
-	qsub runs/petsc-ksp-multiple-node-profiling.pbs
+# run a profiling with Score-P on multiple nodes
+run-petsc-ksp-multiple-node-scorep:
+	qsub runs/petsc-ksp-multiple-node-scorep.pbs
 
-# real target that create petsc-ksp
+# run a profiling with PGprof on a single node
+run-petsc-ksp-single-node-pgprof:
+	qsub runs/petsc-ksp-single-node-pgprof.pbs
+
+# run a profiling with PGprof on multiple nodes
+run-petsc-ksp-multiple-node-pgprof:
+	qsub runs/petsc-ksp-multiple-node-pgprof.pbs
+
+# real target that creates petsc-ksp
 ${BINDIR}/petsc-ksp: ${OBJDIR}/helper.o ${OBJDIR}/main_ksp.o
 	${CXX} -o $@ $^ ${LDFLAGS}
 
-# real target that create petsc-ksp-scorep
+# real target that creates petsc-ksp-scorep
 ${BINDIR}/petsc-ksp-scorep: ${OBJDIR}/helper.scorep.o ${OBJDIR}/main_ksp.scorep.o
 	SCOREP_WRAPPER_INSTRUMENTER_FLAGS=${SCOREP_FLAGS} \
 		${SCOREPCXX} -o $@ $^ ${LDFLAGS}
+
+# real target that creates petsc-ksp-pgprof
+${BINDIR}/petsc-ksp-pgprof: ${OBJDIR}/helper.pgprof.o ${OBJDIR}/main_ksp.pgprof.o
+	${CXX} -o $@ $^ ${LDFLAGS} -Minfo=accel -Mprof=ccff
 
 # underlying target compiling C++ code
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
 	${CXX} -c -o $@ $< ${CXXFLAGS}
 
-# underlying rule compuling C++ code with Score-P
+# underlying rule compiling C++ code with Score-P
 ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
 	SCOREP_WRAPPER_INSTRUMENTER_FLAGS=${SCOREP_FLAGS} \
 		${SCOREPCXX} -c -o $@ $< ${CXXFLAGS}
+
+# underlying rule compiling C++ code with PGprof profiling
+${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.cpp
+	${CXX} -c -o $@ $< ${CXXFLAGS} -Minfo=ccff -Mprof=ccff
 
 # check and create necessary directories
 check-dir:
