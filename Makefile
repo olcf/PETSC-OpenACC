@@ -54,10 +54,7 @@ endif
 
 
 # Score-P flags
-SCOREP_FLAGS = \
-	"--static --compiler --preprocess --memory --mpp=mpi --openacc \
-	--thread=none --mutex=none --nocuda --noonline-access --nopomp \
-	--noopenmp --preprocess --noopencl"
+SCOREP_FLAGS = "--static --compiler --preprocess --memory --mpp=mpi --openacc" 
 
 
 # phony targets
