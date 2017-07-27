@@ -15,8 +15,10 @@
 HOSTNAME=`hostname`
 if [[ ${HOSTNAME} != "titan-"* ]];
 then
-    printf "ERROR: This script is for Titan@ORNL!! Exit now.\n"
-    exit 1
+    printf "============================================================\n"
+    printf "IMPORTANT: This script is for Titan at ORNL!!\n"
+    printf "You may need to modify this script for your current machine!\n"
+    printf "============================================================\n"
 fi
 
 
