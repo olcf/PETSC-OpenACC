@@ -49,12 +49,12 @@ else
     SCOREPCXX := scorep-mpicxx
 
     override CXXFLAGS := -std=c++11 ${PETSC_CXX_FLAGS} ${CXXFLAGS}
-    override LDFLAGS := ${LDFLAGS} -acc -ta=tesla:cc20,host,multicore ${PETSC_LINK_FLAGS}
+    override LDFLAGS := ${LDFLAGS} -acc -ta=tesla:cc35,host,multicore ${PETSC_LINK_FLAGS}
 endif
 
 
 # Score-P flags
-SCOREP_FLAGS = "--static --compiler --preprocess --memory --mpp=mpi --openacc" 
+SCOREP_FLAGS = "--static --compiler --preprocess --memory --mpp=mpi --openacc --cuda" 
 
 
 # phony targets
