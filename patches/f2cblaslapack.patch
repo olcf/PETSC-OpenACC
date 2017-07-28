@@ -1,0 +1,11 @@
+--- f2cblaslapack.py	2016-06-05 13:11:05.000000000 -0400
++++ f2cblaslapack_new.py	2017-07-27 23:30:46.279923000 -0400
+@@ -62,7 +62,7 @@
+ 
+     try:
+       self.logPrintBox('Compiling F2CBLASLAPACK; this may take several minutes')
+-      output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make -f tmpmakefile cleanblaslapck cleanlib && make -f tmpmakefile '+make_target, timeout=2500, log = self.log)
++      output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make -f tmpmakefile cleanblaslapck cleanlib && make -j16 -f tmpmakefile '+make_target, timeout=2500, log = self.log)
+     except RuntimeError, e:
+       raise RuntimeError('Error running make on '+blasDir+': '+str(e))
+     try:
