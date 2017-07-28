@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -l
 #
 # set_up_environment.sh
 # Copyright (C) 2017 Pi-Yueh Chuang <pychuang@gwu.edu>
@@ -19,6 +19,7 @@ then
     printf "IMPORTANT: This script is for Titan at ORNL!!\n"
     printf "You may need to modify this script for your current machine!\n"
     printf "============================================================\n"
+    return 1
 fi
 
 
@@ -60,7 +61,7 @@ CURRENT_GCC=`module list -t 2>&1 | grep "^gcc\/"`
 
 if [[ "${CURRENT_GCC}" = "gcc/6.3.0"* ]];
 then
-    printf "Current GCC version is ${CURRENT_PGI}. No need to switch.\n"
+    printf "Current GCC version is ${CURRENT_GCC}. No need to switch.\n"
 elif [[ "${CURRENT_GCC}" = "" ]];
 then
     printf "No GCC found. Loading gcc/6.3.0 ... "

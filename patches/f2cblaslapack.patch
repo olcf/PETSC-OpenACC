@@ -5,7 +5,7 @@
      try:
        self.logPrintBox('Compiling F2CBLASLAPACK; this may take several minutes')
 -      output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make -f tmpmakefile cleanblaslapck cleanlib && make -f tmpmakefile '+make_target, timeout=2500, log = self.log)
-+      output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make -f tmpmakefile cleanblaslapck cleanlib && make -j16 -f tmpmakefile '+make_target, timeout=2500, log = self.log)
++      output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make -f tmpmakefile cleanblaslapck cleanlib && SCOREP_WRAPPER=off make -j16 -f tmpmakefile '+make_target, timeout=2500, log = self.log)
      except RuntimeError, e:
        raise RuntimeError('Error running make on '+blasDir+': '+str(e))
      try:

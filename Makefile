@@ -58,7 +58,10 @@ SCOREP_FLAGS = "--static --compiler --preprocess --memory --mpp=mpi --openacc --
 
 
 # phony targets
-.PHONY: all clean check-dir petsc-ksp petsc-ksp-scorep \
+.PHONY: all \
+	build-petsc \
+	clean-build clean-petsc clean-all check-dir \
+	petsc-ksp petsc-ksp-scorep \
 	run-petsc-ksp-single-node-scaling \
 	run-petsc-ksp-multiple-node-scaling \
 	run-petsc-ksp-single-node-profiling \
@@ -66,6 +69,10 @@ SCOREP_FLAGS = "--static --compiler --preprocess --memory --mpp=mpi --openacc --
 
 # target all
 all: petsc-ksp petsc-ksp-scorep
+
+# build PETSc library
+build-petsc:
+	sh -l scripts/petsc.sh
 
 # makeing an executable binary petsc-ksp
 petsc-ksp: check-dir ${BINDIR}/petsc-ksp
@@ -131,8 +138,15 @@ check-dir:
 	@if [ ! -d ${OBJDIR} ]; then mkdir ${OBJDIR}; fi
 	@if [ ! -d ${BINDIR} ]; then mkdir ${BINDIR}; fi
 
-# clean everything from build
-clean:
+# clean executables and object files
+clean-build:
 	@rm -rf ${OBJDIR} ${BINDIR}
+
+# clean everything from PETSc
+clean-petsc:
+	@rm -rf extra
+
+# clean everything
+clean-all: clean-build clean-petsc
 
 # vim:ft=make

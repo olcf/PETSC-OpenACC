@@ -13,12 +13,12 @@ SCOREP_WRAPPER=off                                      \
     \
     --with-cc="scorep-cc"                               \
     --with-clib-autodetect=0                            \
-    --CFLAGS="-w"                                       \
+    --CFLAGS="-w -craype-verbose"                       \
     --COPTFLAGS=""                                      \
     \
     --with-cxx="scorep-CC"                              \
     --with-cxxlib-autodetect=0                          \
-    --CXXFLAGS="-w"                                     \
+    --CXXFLAGS="-w -craype-verbose"                     \
     --CXXOPTFLAGS=""                                    \
     \
     --with-fc=0                                         \
