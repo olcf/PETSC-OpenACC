@@ -4,10 +4,9 @@
     \
     --PETSC_ARCH=RELEASE-TITAN                          \
     --with-precision=double                             \
-    --with-clanguage=C++                                \
+    --with-clanguage=C                                  \
     --with-shared-libraries=0                           \
     --with-debugger=pgdbg                               \
-    --with-64-bit-indices=0                             \
     --with-errorchecking=0                              \
     \
     --with-cc="cc"                                      \
@@ -31,11 +30,10 @@
     \
     --with-gnu-compilers=0                              \
     --with-vendor-compilers="pgi"                       \
-    --with-large-file-io=0                              \
-    --with-cxx-dialect="C++11"                          \
     --with-debugging=0                                  \
     --with-gcov=0                                       \
     --with-dependencies=0                               \
+    --with-log=0                                        \
     \
     --download-f2cblaslapack=yes                        \
     \

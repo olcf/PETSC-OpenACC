@@ -83,17 +83,9 @@ patch -s -i ${WORKING_DIR}/patches/f2cblaslapack.patch \
     ${PETSC_DIR}/config/BuildSystem/config/packages/f2cblaslapack.py || return
 printf "done.\n"
 
-# re-extract original makefile, in case it has already been patched
-tar -xzf petsc-lite-3.7.6.tar.gz petsc-3.7.6/makefile || return
-
-# this patch turn off Score-P wrapper for a checking steping
-printf "Patching petsc-3.7.6/makefile ... "
-patch -s -i ${WORKING_DIR}/patches/makefile.patch ${PETSC_DIR}/makefile || return
-printf "done.\n"
-
 
 # ==============
-# Configure PETSc: release build
+# Configure PETSc
 # ==============
 
 # go to PETSc source folder
@@ -115,61 +107,6 @@ printf "done.\n"
 
 
 # ==============
-# Configure PETSc: release build
-# ==============
-
-# re-build f2cblaslapack with wrapper turned-off
-if [[ -d "SCOREP-TITAN/externalpackages/f2cblaslapack-3.4.2.q1" ]];
-then
-    printf "Re-build f2cblaslapack with Score-P wrapper disabled ... "
-    cd SCOREP-TITAN/externalpackages/f2cblaslapack-3.4.2.q1 || return
-    make -s -f ./tmpmakefile cleanblaslapck cleanlib || return
-    rm ../../lib/libf2cblas.a ../../lib/libf2clapack.a || return
-    SCOREP_WRAPPER=off make -f ./tmpmakefile -j16 single double \
-        > f2cblaslapack_rebuild.log 2>&1 || return
-    cp libf2cblas.a libf2clapack.a ../../lib || return
-    cd ../../../ || return
-    printf "done.\n"
-fi
-
-# configure Score-P version
-printf "Configuring Score-P build (see scorep_config.log for progress) ... "
-source ${SCRIPT_DIR}/petsc_configure_scorep.sh > scorep_config.log 2>&1
-
-# check if the configuration for Score-P build completed
-SUCCESS=`tail scorep_config.log | grep -c "Configure\ stage\ complete\."`
-if [[ ${SUCCESS} = "0" ]];
-then
-    printf "Score-P build failed!!\n"
-    return 1
-fi
-
-printf "done.\n"
-
-
-# ==============
-# Re-build f2cblaslapack to enable Score-P
-# ==============
-
-# go to source folder of the package f2cblaslapack for Score-P
-cd ${PETSC_DIR}/SCOREP-TITAN/externalpackages/f2cblaslapack-3.4.2.q1 || return
-
-printf "Re-build f2cblaslapack with Score-P wrapper enabled ... "
-
-# remove files built without Score-P
-make -s -f ./tmpmakefile cleanblaslapck cleanlib || return
-
-# re-build f2cblaslapack with Score-P wrapper turned on
-SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--verbose --mpp=mpi --openacc --cuda" \
-    make -f ./tmpmakefile -j16 single double > f2cblaslapack_rebuild.log 2>&1 || return
-
-# copy generated blas and lapack libraries
-cp libf2cblas.a libf2clapack.a ../../lib || return
-
-printf "done.\n"
-
-
-# ==============
 # Build PETSc with Score-P
 # ==============
 
@@ -181,15 +118,6 @@ printf "Making release build ... "
 make \
     PETSC_DIR=${PETSC_DIR} \
     PETSC_ARCH=RELEASE-TITAN all > release_make.log 2>&1 || return
-printf "done.\n"
-
-
-# build PETSc with Score-P
-printf "Making release build ... "
-SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--verbose --mpp=mpi --openacc --cuda" \
-    make \
-        PETSC_DIR=${PETSC_DIR} \
-        PETSC_ARCH=SCOREP-TITAN all > release_make.log 2>&1 || return
 printf "done.\n"
 
 

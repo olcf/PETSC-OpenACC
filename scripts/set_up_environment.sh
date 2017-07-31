@@ -44,12 +44,12 @@ fi
 
 CURRENT_PGI=`module list -t 2>&1 | grep "^pgi\/"`
 
-if [[ "${CURRENT_PGI}" = "pgi/17.5.0"* ]];
+if [[ "${CURRENT_PGI}" = "pgi/16.10.0"* ]];
 then
     printf "Current PGI version is ${CURRENT_PGI}. No need to switch.\n"
 else
-    printf "Current PGI version is ${CURRENT_PGI}. Switching to pgi/17.5.0 ... "
-    module switch ${CURRENT_PGI} pgi/17.5.0
+    printf "Current PGI version is ${CURRENT_PGI}. Switching to pgi/16.10.0 ... "
+    module switch ${CURRENT_PGI} pgi/16.10.0
     printf "done.\n"
 fi
 
@@ -59,25 +59,25 @@ fi
 
 CURRENT_GCC=`module list -t 2>&1 | grep "^gcc\/"`
 
-if [[ "${CURRENT_GCC}" = "gcc/6.3.0"* ]];
+if [[ "${CURRENT_GCC}" = "gcc/4.9.3"* ]];
 then
     printf "Current GCC version is ${CURRENT_GCC}. No need to switch.\n"
 elif [[ "${CURRENT_GCC}" = "" ]];
 then
-    printf "No GCC found. Loading gcc/6.3.0 ... "
-    module load gcc/6.3.0
+    printf "No GCC found. Loading gcc/4.9.3 ... "
+    module load gcc/4.9.3
     printf "done.\n"
 else
-    printf "Current GCC version is ${CURRENT_GCC}. Switching to gcc/6.3.0 ... "
-    module switch ${CURRENT_GCC} gcc/6.3.0
+    printf "Current GCC version is ${CURRENT_GCC}. Switching to gcc/4.9.3 ... "
+    module switch ${CURRENT_GCC} gcc/4.9.3
     printf "done.\n"
 fi
 
 printf "Regenerating .mypgcpprc in ${HOME} ... "
 $PGI_PATH/linux86-64/default/bin/makelocalrc $PGI_PATH/linux86-64/default/bin \
-    -gcc /opt/gcc/6.3.0/bin/gcc \
-    -gpp /opt/gcc/6.3.0/bin/g++ \
-    -g77 /opt/gcc/6.3.0/bin/gfortran \
+    -gcc /opt/gcc/4.9.3/bin/gcc \
+    -gpp /opt/gcc/4.9.3/bin/g++ \
+    -g77 /opt/gcc/4.9.3/bin/gfortran \
     -x -o > ${HOME}/.mypgcpprc 2>/dev/null
 printf "done.\n"
 
@@ -87,15 +87,35 @@ printf "done.\n"
 
 printf "Reloading Score-P ... "
 module unload scorep
-SCOREP_STATUS=`module load scorep 2>&1 | sed "s/Loading\ Score-P\ for\ pgi\/.*/SUCCESS/g"`
-if [[ ${SCOREP_STATUS} = "SUCCESS" ]];
+module load scorep
+printf "done.\n"
+
+CURRENT_SCOREP=`module list -t 2>&1 | grep "^scorep\/"`
+
+if [[ ! ${CURRENT_SCOREP} = "scorep/3.1" ]];
 then
-    module load scorep 2>/dev/null
-    printf "done.\n"
-else
-    printf "failed.\n"
-    printf "Can not load Score-P. "
-    printf "Maybe this shell script is outdated or something wrong on Titan. "
-    printf "The error message is:\n"
-    module load scorep
+    printf "\n"
+    printf "Warning: the version of default SCORE-P module is not 3.1 "
+    printf "You may encounter problems. "
+    printf "If that happens, manually load Score-P 3.1 module.\n"
 fi
+
+# ==============
+# Load cudatoolkit
+# ==============
+
+printf "Loading CUDA ... "
+module unload cudatoolkit
+module load cudatoolkit
+printf "done.\n"
+
+CURRENT_CUDA=`module list -t 2>&1 | grep "^cudatoolkit\/"`
+
+if [[ ! "${CURRENT_CUDA}" = "cudatoolkit/7.5."* ]];
+then
+    printf "\n"
+    printf "Warning: the version of default CUDA module is not 7.5. "
+    printf "You may encounter problems. "
+    printf "If that happens, manually load CUDA 7.5 module.\n"
+fi
+
