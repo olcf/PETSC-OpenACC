@@ -6,6 +6,9 @@
 // OpenACC header
 # include <openacc.h>
 
+PetscScalar single_row_mult(const PetscInt n, const PetscInt *cols, 
+        const MatScalar *data, const PetscScalar *x);
+
 #undef __FUNCT__
 #define __FUNCT__ "MatMult_SeqAIJ"
 PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
@@ -61,39 +64,21 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
     aj = a->j;
     aa = a->a;
 
-    int present;
-
     # pragma acc wait(1)
-    present = acc_is_present((PetscInt*)ii, (m+1)*sizeof(PetscInt));
-    # pragma acc enter data copyin(ii[:m+1]) if(! present) async(1)
-    present = acc_is_present((PetscInt*)aj, (a->nz)*sizeof(PetscInt));
-    # pragma acc enter data copyin(aj[:a->nz]) if(! present) async(1)
-    present = acc_is_present((MatScalar*)aa, (a->nz)*sizeof(MatScalar));
-    # pragma acc enter data copyin(aa[:a->nz]) if(! present) async(1)
+    # pragma acc enter data copyin(ii[:m+1]) async(1)
+    # pragma acc enter data copyin(aj[:a->nz]) async(1)
+    # pragma acc enter data copyin(aa[:a->nz]) async(1)
 
     # pragma acc enter data copyin(x[:xSize]) async(1)
 
-    present = 0;
-
+    PetscInt present = 0;
     PetscInt current = 0;
 
     while((present == 0) && (current < m))
     {
-      PetscInt    bg = ii[current];
-      PetscInt    ed = ii[current+1];
-      PetscScalar s = 0.0;
-
-      for (PetscInt j=bg; j<ed; j++)
-      {
-        MatScalar aValue = aa[j];
-        PetscInt  rId = aj[j];
-        PetscScalar xValue = x[rId];
-
-        s += aValue * xValue;
-      }
-      y[current] = s;
+      y[current] = single_row_mult(
+              ii[current+1]-ii[current], aj+ii[current], aa+ii[current], x);
       current += 1;
-
       present = acc_async_test_all();
     }
 
@@ -115,22 +100,7 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
         copyout(y[bStart:sizeBlock]) \
         async(b+1)
       for(PetscInt _i=bStart; _i<bEnd; ++_i)
-      {
-        PetscInt    bg = ii[_i];
-        PetscInt    ed = ii[_i+1];
-        PetscScalar s = 0.0;
-
-        # pragma acc loop independent seq reduction(+:s)
-        for (PetscInt j=bg; j<ed; j++)
-        {
-          MatScalar aValue = aa[j];
-          PetscInt  rId = aj[j];
-          PetscScalar xValue = x[rId];
-
-          s += aValue * xValue;
-        }
-        y[_i] = s;
-      }
+        y[_i] = single_row_mult(ii[_i+1]-ii[_i], aj+ii[_i], aa+ii[_i], x);
     }
 
     if (((m - current) % sizeBlock) != 0)
@@ -148,22 +118,7 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
         copyout(y[bStart:sizeBlock]) \
         async(nBlocks+1)
       for(PetscInt _i=bStart; _i<m; ++_i)
-      {
-        PetscInt    bg = ii[_i];
-        PetscInt    ed = ii[_i+1];
-        PetscScalar s = 0.0;
-
-        # pragma acc loop independent seq reduction(+:s)
-        for (PetscInt j=bg; j<ed; j++)
-        {
-          MatScalar aValue = aa[j];
-          PetscInt  rId = aj[j];
-          PetscScalar xValue = x[rId];
-
-          s += aValue * xValue;
-        }
-        y[_i] = s;
-      }
+        y[_i] = single_row_mult(ii[_i+1]-ii[_i], aj+ii[_i], aa+ii[_i], x);
     }
     # pragma acc wait
     # pragma acc exit data delete(x[:xSize]) async
@@ -175,4 +130,16 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
   ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecRestoreArray(yy,&y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
+}
+
+# pragma acc routine seq
+PetscScalar single_row_mult(const PetscInt n, const PetscInt *cols, 
+        const MatScalar *data, const PetscScalar *x)
+{
+    PetscScalar s = 0;
+
+    for (PetscInt i=0; i<n; ++i)
+        s += data[i] * x[cols[i]];
+
+    return s;
 }
