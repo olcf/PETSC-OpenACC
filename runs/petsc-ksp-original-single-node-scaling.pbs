@@ -2,7 +2,7 @@
 
 #PBS -A gen010interns
 #PBS -j oe
-#PBS -l walltime=1:00:00
+#PBS -l walltime=2:00:00
 #PBS -l nodes=1
 #PBS -l gres=atlas1%atlas2
 #PBS -m e
@@ -39,30 +39,25 @@ cd ${MEMBERWORK}/${PROJ}/${RUN}
 rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJ}
 rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 
-# export variables for Score-P
-export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${PBS_JOBID}
-export SCOREP_ENABLE_PROFILING=true
-export SCOREP_ENABLE_TRACING=true
-export SCOREP_ENABLE_UNWINDING=true
-export SCOREP_TOTAL_MEMORY=100M
-export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=33
-
 # start runs
-echo "Single Node Profiling: petsc-ksp-scorep-original" > ${LOG}
-echo "================================================" >> ${LOG}
+echo "Single Node Strong Scaling: petsc-ksp-original" > ${LOG}
+echo "==============================================" >> ${LOG}
 
 date >> ${LOG}
 echo "" >> ${LOG}
 
-echo "16 Cores" >> ${LOG}
-echo "--------" >> ${LOG}
-aprun -n 16 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep-original \
-    -da_grid_x 300 \
-    -da_grid_y 300 \
-    -da_grid_z 300 \
-    -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
-echo "" >> ${LOG}
-echo "" >> ${LOG}
+for i in 16 8 4 2 1
+do
+    echo "${i} Cores" >> ${LOG}
+    echo "--------" >> ${LOG}
+    aprun -n ${i} ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-original \
+        -da_grid_x 300 \
+        -da_grid_y 300 \
+        -da_grid_z 300 \
+        -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
+    echo "" >> ${LOG}
+    echo "" >> ${LOG}
+done
 
 # sync the results in ${MEMBERWORK}/${PROJ}/${RUN} to ${RUN_PATH}
 rsync -Pravq ${MEMBERWORK}/${PROJ}/${RUN} ${RUN_BASE}

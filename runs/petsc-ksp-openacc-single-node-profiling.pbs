@@ -26,7 +26,7 @@ RUN_PATH=${RUN_BASE}/${RUN}
 # the path to the log file
 LOG=${RUN_PATH}/${RUN}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
 
-# create the RUN_PATH is it does not exist
+# create the RUN_PATH if it does not exist
 if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
 
 # sync the run folder to ${MEMBERWORK}/${PROJ}
