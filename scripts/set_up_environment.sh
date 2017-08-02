@@ -44,12 +44,12 @@ fi
 
 CURRENT_PGI=`module list -t 2>&1 | grep "^pgi\/"`
 
-if [[ "${CURRENT_PGI}" = "pgi/16.10.0"* ]];
+if [[ "${CURRENT_PGI}" = "pgi/17.5.0"* ]];
 then
     printf "Current PGI version is ${CURRENT_PGI}. No need to switch.\n"
 else
-    printf "Current PGI version is ${CURRENT_PGI}. Switching to pgi/16.10.0 ... "
-    module switch ${CURRENT_PGI} pgi/16.10.0
+    printf "Current PGI version is ${CURRENT_PGI}. Switching to pgi/17.5.0 ... "
+    module switch ${CURRENT_PGI} pgi/17.5.0
     printf "done.\n"
 fi
 

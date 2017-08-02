@@ -3,13 +3,17 @@
 #PBS -A gen010interns
 #PBS -j oe
 #PBS -l walltime=1:00:00
-#PBS -l nodes=64
+#PBS -l nodes=1
 #PBS -l gres=atlas1%atlas2
 #PBS -m e
 #PBS -M chuangp@ornl.gov
 
 # the name to the project from which CPU hours will be charged
 PROJ=gen010
+
+# source environment variables
+source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
+module switch pgi pgi/17.5.0
 
 # the name to this run case
 RUN=`basename "${PBS_JOBNAME}" ".pbs"`
@@ -26,6 +30,9 @@ LOG=${RUN_PATH}/${RUN}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
 # create the RUN_PATH is it does not exist
 if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
 
+# create folder for profiling results
+mkdir ${RUN_PATH}/${RUN}-${PBS_JOBID}
+
 # sync the run folder to ${MEMBERWORK}/${PROJ}
 rsync -Pravq --delete ${RUN_PATH} ${MEMBERWORK}/${PROJ}
 
@@ -36,38 +43,31 @@ cd ${MEMBERWORK}/${PROJ}/${RUN}
 rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJ}
 rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 
-# export variables for Score-P
-export PGI_ACC_DEVICE_TYPE=NVIDIA
+# export the variable for using GPU with multiple MPI processes
+unset CUDA_LAUNCH_BLOCKING
+export CRAY_CUDA_PROXY=1
 
 # start runs
-echo "Single Node Profiling: petsc-ksp-pgprof" > ${LOG}
-echo "=======================================" >> ${LOG}
+echo "Single Node Profiling: petsc-ksp-pgprof-openacc" > ${LOG}
+echo "================================================" >> ${LOG}
 
 date >> ${LOG}
 echo "" >> ${LOG}
 
-echo "1024 Cores" >> ${LOG}
+echo "16 Cores" >> ${LOG}
 echo "--------" >> ${LOG}
-
-aprun -n 1024 \
+aprun -n 16 \
     pgprof \
-        --analysis-metrics \
-        --cpu-thread-tracing on \
-        --dependency-analysis \
-        --cpu-profiling on \
-        --export-profile ${RUN}-${PBS_JOBID}/profile.%q{PMI_RANK}.%p.out \
-        --force-overwrite \
-    bin/petsc-ksp \
-        -da_grid_x 500 \
-        -da_grid_y 500 \
-        -da_grid_z 500 \
-        -config configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
-
-aprun -n 16 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep \
-    -da_grid_x 300 \
-    -da_grid_y 300 \
-    -da_grid_z 300 \
-    -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
+    --export-profile ${MEMBERWORK}/${PROJ}/${RUN}/${RUN}-${PBS_JOBID}/rank.%q{ALPS_APP_PE}.nvvp \
+    --cpu-profiling on \
+    --cpu-profiling-scope function \
+    --openacc-profiling on \
+    --concurrent-kernels on \
+        ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-pgprof-openacc \
+        -da_grid_x 300 \
+        -da_grid_y 300 \
+        -da_grid_z 300 \
+        -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
 echo "" >> ${LOG}
 echo "" >> ${LOG}
 

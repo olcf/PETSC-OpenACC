@@ -31,8 +31,8 @@ PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 .PHONY: all \
 	build-petsc \
 	clean-build clean-petsc clean-all check-dir \
-	petsc-ksp-original petsc-ksp-scorep-original \
-	petsc-ksp-openacc petsc-ksp-scorep-openacc \
+	petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
+	petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc \
 	run-petsc-ksp-single-node-scaling \
 	run-petsc-ksp-multiple-node-scaling \
 	run-petsc-ksp-single-node-profiling \
@@ -42,8 +42,8 @@ PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 .PRECIOUS: ${OBJDIR}/%.o
 
 # target all
-all: petsc-ksp-original petsc-ksp-scorep-original \
-	petsc-ksp-openacc petsc-ksp-scorep-openacc
+all: petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
+	petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc
 
 # build PETSc library
 build-petsc: ${PETSCLIB}
@@ -58,16 +58,29 @@ petsc-ksp-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-openacc
 petsc-ksp-scorep-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-scorep-original
 
 # makeing an executable binary petsc-ksp-scorep-openacc
-petsc-ksp-scorep-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-scorep-openacc
+petsc-ksp-scorep-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-scorep-openacc
 
-# real target that creates petsc-ksp-scorep
+# makeing an executable binary petsc-ksp-pgprof-origina;
+petsc-ksp-pgprof-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-pgprof-original
+
+# makeing an executable binary petsc-ksp-pgprof-openacc
+petsc-ksp-pgprof-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-pgprof-openacc
+
+# real target that creates petsc-ksp-scorep-*
 ${BINDIR}/petsc-ksp-scorep-%: \
 	$(foreach i, $(SRC:.cpp=.scorep.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.scorep.o), ${OBJDIR}/%/${i})
 
 	scorep ${SCOREP_FLAGS} ${CXX} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
-# real target that creates petsc-ksp-original
+# real target that creates petsc-ksp-pgprof-*
+${BINDIR}/petsc-ksp-pgprof-%: \
+	$(foreach i, $(SRC:.cpp=.pgprof.o), ${OBJDIR}/${i})\
+	$(foreach i, $(KERNEL:.c=.pgprof.o), ${OBJDIR}/%/${i})
+
+	${CXX} -Mprof=ccff -pg -Minstrument -o $@ $^ ${LDFLAGS} ${PETSCLIB}
+
+# real target that creates petsc-ksp-*
 ${BINDIR}/petsc-ksp-%: \
 	$(foreach i, $(SRC:.cpp=.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.o), ${OBJDIR}/%/${i})
@@ -80,6 +93,22 @@ ${PETSCLIB}: \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
 	sh -l scripts/petsc.sh
 
+# underlying rule compiling C++ code with Score-P
+${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
+	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
+
+# underlying rule compiling C code with Score-P
+${OBJDIR}/%.scorep.o: ${SRCDIR}/%.c
+	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
+
+# underlying rule compiling C++ code with PGprof
+${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.cpp
+	${CXX} -Mprof=ccff -pg -Minstrument -c -o $@ $< ${CXXFLAGS}
+
+# underlying rule compiling C code with PGprof
+${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.c
+	${CXX} -Mprof=ccff -c -o $@ $< ${CXXFLAGS}
+
 # underlying target compiling C++ code
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
 	${CXX} -c -o $@ $< ${CXXFLAGS}
@@ -88,17 +117,9 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
 ${OBJDIR}/%.o: ${SRCDIR}/%.c
 	${CXX} -c -o $@ $< ${CXXFLAGS}
 
-# underlying rule compiling C++ code with Score-P
-${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
-	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
-
-# underlying rule compiling C++ code with Score-P
-${OBJDIR}/%.scorep.o: ${SRCDIR}/%.c
-	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
-
 # rule to run PBS script in directory "runs"
-run-%:
-	qsub runs/petsc-%.pbs
+run-%: runs/%.pbs
+	qsub $<
 
 # check and create necessary directories
 check-dir:
