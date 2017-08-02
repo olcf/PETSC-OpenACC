@@ -74,12 +74,11 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
     PetscInt present = 0;
     PetscInt current = 0;
 
-    while((present == 0) && (current < m))
+    while((! acc_async_test_all()) && (current < m))
     {
       y[current] = single_row_mult(
               ii[current+1]-ii[current], aj+ii[current], aa+ii[current], x);
       current += 1;
-      present = acc_async_test_all();
     }
 
     int sizeBlock = 128 * 16 * 280;
