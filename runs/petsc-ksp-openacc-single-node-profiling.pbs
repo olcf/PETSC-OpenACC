@@ -11,6 +11,9 @@
 # the name to the project from which CPU hours will be charged
 PROJ=gen010
 
+# source environment variables
+source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
+
 # the name to this run case
 RUN=`basename "${PBS_JOBNAME}" ".pbs"`
 
@@ -37,33 +40,26 @@ rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJ}
 rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 
 # export variables for Score-P
-export PGI_ACC_DEVICE_TYPE=NVIDIA
+export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${PBS_JOBID}
+export SCOREP_ENABLE_PROFILING=true
+export SCOREP_ENABLE_TRACING=true
+export SCOREP_ENABLE_UNWINDING=true
+export SCOREP_TOTAL_MEMORY=100M
+export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=33
+
+# export the variable for using GPU with multiple MPI processes
+export CRAY_CUDA_PROXY=1
 
 # start runs
-echo "Single Node Profiling: petsc-ksp-pgprof" > ${LOG}
-echo "=======================================" >> ${LOG}
+echo "Single Node Profiling: petsc-ksp-scorep-openacc" > ${LOG}
+echo "================================================" >> ${LOG}
 
 date >> ${LOG}
 echo "" >> ${LOG}
 
 echo "16 Cores" >> ${LOG}
 echo "--------" >> ${LOG}
-
-aprun -n 16 \
-    pgprof \
-        --analysis-metrics \
-        --cpu-thread-tracing on \
-        --dependency-analysis \
-        --cpu-profiling on \
-        --export-profile ${RUN}-${PBS_JOBID}/profile.%q{PMI_RANK}.%p.out \
-        --force-overwrite \
-    bin/petsc-ksp \
-        -da_grid_x 200 \
-        -da_grid_y 200 \
-        -da_grid_z 200 \
-        -config configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
-
-aprun -n 16 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep \
+aprun -n 16 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep-openacc \
     -da_grid_x 300 \
     -da_grid_y 300 \
     -da_grid_z 300 \
