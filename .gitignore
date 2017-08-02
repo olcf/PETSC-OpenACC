@@ -2,3 +2,6 @@ bin/
 extra/
 obj/
 runs/**/
+
+*.pbs.o*
+*.OU
