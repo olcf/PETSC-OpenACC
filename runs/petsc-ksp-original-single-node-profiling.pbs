@@ -8,8 +8,13 @@
 #PBS -m e
 #PBS -M chuangp@ornl.gov
 
-# the name to the project from which CPU hours will be charged
-PROJ=gen010
+# check if variable PROJ is set and if ${MEMBERWORK}/${PROJ} is valid
+if [[ ! -d ${MEMBERWORK}/${PROJ:?PROJ should be set first} ]];
+then
+    printf "${MEMBEROWRK}/${PROJ} is not usable!\n"
+    printf "Please check both MEMBERWORK and PROJ are set correctly!\n"
+    exit
+fi
 
 # source environment variables
 source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
