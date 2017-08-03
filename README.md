@@ -1,4 +1,4 @@
-# ORNL-OpenACC
+# PETSc-OpenACC
 
 This project demonstrates the feasibility of migrating legacy PETSc-based 
 applications to modern supercomputers (which are often heterogeneous platforms)
