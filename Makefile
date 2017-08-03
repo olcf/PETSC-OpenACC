@@ -5,11 +5,12 @@
 
 
 # set up environment
-CXX := CC
-CXXFLAGS := -std=c++11 -craype-verbose -w \
-	-acc -ta=host,tesla:cc35 -Minfo=accel \
-	-I./extra/petsc-3.7.6/include -I./extra/petsc-3.7.6/RELEASE-TITAN/include
-LDFLAGS := -craype-verbose -acc -ta=host,tesla:cc35 -Minfo=accel
+CXX = CC
+CXXFLAGS = -std=c++11 -w \
+		   -acc -ta=host,tesla:cc35 -Minfo=accel \
+		   -I./extra/petsc-3.7.6/include \
+		   -I./extra/petsc-3.7.6/RELEASE-TITAN/include
+LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel
 
 # directories
 SRCDIR = ./src
@@ -18,7 +19,10 @@ BINDIR = ./bin
 LIBDIR = ./lib
 
 # Score-P flags
-SCOREP_FLAGS = --static --mpp=mpi --openacc --verbose
+SCOREP_FLAGS = --static --mpp=mpi --openacc --cuda
+
+# PGprof flags
+PGPROF_FLAGS = -Mprof=ccff
 
 # source files
 SRC = helper.cpp main_ksp.cpp
@@ -27,44 +31,81 @@ KERNEL = MatAssemblyEnd_SeqAIJ.c MatDestroy_SeqAIJ.c MatMult_SeqAIJ.c
 # PETSc
 PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 
+# executable binary files
+EXE = petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
+	  petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc
+
+# PBS job targets
+RUNS := $(subst .pbs, , $(subst runs/, run-, $(wildcard runs/*.pbs)))
+
 # phony targets
-.PHONY: all \
-	build-petsc \
-	clean-build clean-petsc clean-all check-dir \
-	petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
-	petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc \
-	run-petsc-ksp-single-node-scaling \
-	run-petsc-ksp-multiple-node-scaling \
-	run-petsc-ksp-single-node-profiling \
-	run-petsc-ksp-multiple-node-profiling
+.PHONY: help list-executables list-runs all build-petsc \
+	clean-build clean-petsc clean-all check-dir ${EXE} ${RUNS}
 
 # preserve object files
-.PRECIOUS: ${OBJDIR}/%.o
+.PRECIOUS: ${OBJDIR}/%.o ${OBJDIR}/%.pgprof.o ${OBJDIR}/%.scorep.o
+
+# remove all suffix implicit rules
+.SUFFIXES:
+
+# help
+help:
+	@printf "\n"
+	@printf "Usage:\n"
+	@printf "\n"
+	@printf "\tmake build-petsc\n"
+	@printf "\tmake [make options] all\n"
+	@printf "\tmake [make options] INDIVIDUAL_EXECUTABLE_NAME\n"
+	@printf "\tmake [make options] PROJ=<chargeable project> PBS_RUN\n"
+	@printf "\n"
+	@printf "List all targets:\n"
+	@printf "\n"
+	@printf "\tmake list\n"
+	@printf "\n"
+	@printf "List targets of executable:\n"
+	@printf "\n"
+	@printf "\tmake list-executables\n"
+	@printf "\n"
+	@printf "List targets of PBS runs:\n"
+	@printf "\n"
+	@printf "\tmake list-runs\n"
+	@printf "\n"
+
+space :=
+space +=
+# list all targets
+list: list-executables list-runs
+	@printf "\n"
+	@printf "Other targets:\n\n"
+	@printf "\tall\n"
+	@printf "\tbuild-petsc\n"
+	@printf "\tclean-build\n"
+	@printf "\tclean-petsc\n"
+	@printf "\tclean-all\n"
+	@printf "\n"
+
+# list all targets of executables
+list-executables:
+	@printf "\n"
+	@printf "Available exectuables:\n\n"
+	@printf "\t$(subst ${space},\n\t,$(strip ${EXE}))\n"
+	@printf "\n"
+
+# list all targets of executables
+list-runs:
+	@printf "\n"
+	@printf "Available PBS runs:\n\n"
+	@printf "\t$(subst ${space},\n\t,$(strip ${RUNS}))\n"
+	@printf "\n"
 
 # target all
-all: petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
-	petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc
+all: ${EXE}
 
 # build PETSc library
 build-petsc: ${PETSCLIB}
 
-# makeing an executable binary petsc-ksp-original
-petsc-ksp-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-original
-
-# makeing an executable binary petsc-ksp-openacc
-petsc-ksp-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-openacc
-
-# makeing an executable binary petsc-ksp-scorep-origina;
-petsc-ksp-scorep-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-scorep-original
-
-# makeing an executable binary petsc-ksp-scorep-openacc
-petsc-ksp-scorep-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-scorep-openacc
-
-# makeing an executable binary petsc-ksp-pgprof-origina;
-petsc-ksp-pgprof-original: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-pgprof-original
-
-# makeing an executable binary petsc-ksp-pgprof-openacc
-petsc-ksp-pgprof-openacc: ${PETSCLIB} check-dir ${BINDIR}/petsc-ksp-pgprof-openacc
+# makeing an executable
+${EXE}: %: ${PETSCLIB} check-dir ${BINDIR}/%
 
 # real target that creates petsc-ksp-scorep-*
 ${BINDIR}/petsc-ksp-scorep-%: \
@@ -78,7 +119,7 @@ ${BINDIR}/petsc-ksp-pgprof-%: \
 	$(foreach i, $(SRC:.cpp=.pgprof.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.pgprof.o), ${OBJDIR}/%/${i})
 
-	${CXX} -Mprof=ccff -pg -Minstrument -o $@ $^ ${LDFLAGS} ${PETSCLIB}
+	${CXX} ${PGPROF_FLAGS} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
 # real target that creates petsc-ksp-*
 ${BINDIR}/petsc-ksp-%: \
@@ -91,6 +132,7 @@ ${BINDIR}/petsc-ksp-%: \
 ${PETSCLIB}: \
 	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
+
 	sh -l scripts/petsc.sh
 
 # underlying rule compiling C++ code with Score-P
@@ -103,11 +145,11 @@ ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.c
 
 # underlying rule compiling C++ code with PGprof
 ${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.cpp
-	${CXX} -Mprof=ccff -pg -Minstrument -c -o $@ $< ${CXXFLAGS}
+	${CXX} ${PGPROF_FLAGS} -c -o $@ $< ${CXXFLAGS}
 
 # underlying rule compiling C code with PGprof
 ${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.c
-	${CXX} -Mprof=ccff -c -o $@ $< ${CXXFLAGS}
+	${CXX} ${PGPROF_FLAGS} -c -o $@ $< ${CXXFLAGS}
 
 # underlying target compiling C++ code
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
@@ -118,8 +160,8 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.c
 	${CXX} -c -o $@ $< ${CXXFLAGS}
 
 # rule to run PBS script in directory "runs"
-run-%: runs/%.pbs
-	qsub $<
+${RUNS}:
+	qsub -v PROJ=${PROJ} $(subst run-, runs/, $@).pbs
 
 # check and create necessary directories
 check-dir:
