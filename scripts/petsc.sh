@@ -68,19 +68,56 @@ PETSC_DIR=${WORKING_DIR}/extra/petsc-3.7.6
 # re-extract original aij.c, in case aij.c has already been patched
 tar -xzf petsc-lite-3.7.6.tar.gz petsc-3.7.6/src/mat/impls/aij/seq/aij.c || return
 
-# this patch remove our OpenACC target functions from aij.c
-printf "Patching petsc-3.7.6/src/mat/impls/aij/seq/aij.c ... "
-patch -s -i ${WORKING_DIR}/patches/seq_aij.patch \
-    ${PETSC_DIR}/src/mat/impls/aij/seq/aij.c || return
+# create src/original directory
+printf "Creating src/original directory ... "
+if [[ ! -d ${WORKING_DIR}/src/original ]];
+then
+    mkdir ${WORKING_DIR}/src/original
+fi
+printf "done.\n"
+
+# extract kernel functions
+printf "Extracing source code of kernel functions to src/original ... "
+sed -n "8,11p;973,1032p" petsc-3.7.6/src/mat/impls/aij/seq/aij.c > \
+    ${WORKING_DIR}/src/original/MatAssemblyEnd_SeqAIJ.c
+sed -n "8,11p;1076,1121p" petsc-3.7.6/src/mat/impls/aij/seq/aij.c > \
+    ${WORKING_DIR}/src/original/MatDestroy_SeqAIJ.c
+sed -n "8,11p;1277,1335p" petsc-3.7.6/src/mat/impls/aij/seq/aij.c >  \
+    ${WORKING_DIR}/src/original/MatMult_SeqAIJ.c
+
+# remove kernels from original PETSc source code
+sed -i "973,1032d;1076,1121d;1277,1335d" petsc-3.7.6/src/mat/impls/aij/seq/aij.c
 printf "done.\n"
 
 # re-extract original f2cblaslapack.py, in case it has already been patched
 tar -xzf petsc-lite-3.7.6.tar.gz petsc-3.7.6/config/BuildSystem/config/packages/f2cblaslapack.py || return
 
-# this patch let make build f2cblaslapack package in parallel and turn off Score-P wrapper
-printf "Patching petsc-3.7.6/config/BuildSystem/config/packages/f2cblaslapack.py ... "
-patch -s -i ${WORKING_DIR}/patches/f2cblaslapack.patch \
-    ${PETSC_DIR}/config/BuildSystem/config/packages/f2cblaslapack.py || return
+# let make use 16 cores for f2cblaslapack
+printf "Let make use 16 cores for building f2cblaslapack ... "
+sed -i "s/make\ -f\ tmpmakefile\ '+make_target/make\ -j16\ -f\ tmpmakefile\ '+make_target/g" \
+    petsc-3.7.6/config/BuildSystem/config/packages/f2cblaslapack.py
+printf "done.\n"
+
+# create OpenACC version of kernel based on PETSc original kernel
+printf "Creating OpenACC kernels based on original PETSc kernels ... "
+rm -f ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.c
+rm -f ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.c
+rm -f ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.c
+
+patch -N \
+    -i ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.patch \
+    -o ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.c \
+    ${WORKING_DIR}/src/original/MatAssemblyEnd_SeqAIJ.c
+
+patch -N \
+    -i ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.patch \
+    -o ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.c \
+    ${WORKING_DIR}/src/original/MatDestroy_SeqAIJ.c
+
+patch -N \
+    -i ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.patch \
+    -o ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.c \
+    ${WORKING_DIR}/src/original/MatMult_SeqAIJ.c
 printf "done.\n"
 
 

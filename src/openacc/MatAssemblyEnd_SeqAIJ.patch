@@ -1,0 +1,39 @@
+--- ../original/MatAssemblyEnd_SeqAIJ.c	2017-08-03 18:16:43.977950000 -0400
++++ MatAssemblyEnd_SeqAIJ.c	2017-07-31 14:14:34.399697000 -0400
+@@ -5,2 +5,5 @@
+ 
++// OpenACC header
++# include <openacc.h>
++
+ #undef __FUNCT__
+@@ -19,2 +22,16 @@
+ 
++  // OpenACC starts here
++  int present[3];
++
++  ai = a->i;
++  aj = a->j;
++  aa = a->a;
++
++  present[0] = acc_is_present(ai, (A->rmap->n+1)*sizeof(PetscInt));
++  present[1] = acc_is_present(aj, (a->nz)*sizeof(PetscInt));
++  present[2] = acc_is_present(aa, (a->nz)*sizeof(MatScalar));
++  # pragma acc exit data delete(aj[:a->nz]) if(present[1]) async(1)
++  # pragma acc exit data delete(aa[:a->nz]) if(present[2]) async(1)
++  // OpenACC ends here
++
+   if (m) rmax = ailen[0]; /* determine row with most nonzeros */
+@@ -62,2 +79,13 @@
+   ierr = MatSeqAIJInvalidateDiagonal(A);CHKERRQ(ierr);
++
++  // OpenACC starts here
++  ai = a->i;
++  aj = a->j;
++  aa = a->a;
++
++  # pragma acc update device(ai[0:A->rmap->n+1]) if(present[0]) async(1)
++  # pragma acc enter data copyin(aj[0:a->nz]) if(present[1]) async(1)
++  # pragma acc enter data copyin(aa[0:a->nz]) if(present[2]) async(1)
++  // OpenACC ends here
++
+   PetscFunctionReturn(0);
