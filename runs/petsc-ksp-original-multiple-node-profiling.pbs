@@ -8,8 +8,16 @@
 #PBS -m e
 #PBS -M chuangp@ornl.gov
 
-# the name to the project from which CPU hours will be charged
-PROJ=gen010
+# check if variable PROJ is set and if ${MEMBERWORK}/${PROJ} is valid
+if [[ ! -d ${MEMBERWORK}/${PROJ:?PROJ should be set first} ]];
+then
+    printf "${MEMBEROWRK}/${PROJ} is not usable!\n"
+    printf "Please check both MEMBERWORK and PROJ are set correctly!\n"
+    exit
+fi
+
+# source environment variables
+source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
 
 # the name to this run case
 RUN=`basename "${PBS_JOBNAME}" ".pbs"`
@@ -23,7 +31,7 @@ RUN_PATH=${RUN_BASE}/${RUN}
 # the path to the log file
 LOG=${RUN_PATH}/${RUN}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
 
-# create the RUN_PATH is it does not exist
+# create the RUN_PATH if it does not exist
 if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
 
 # sync the run folder to ${MEMBERWORK}/${PROJ}
@@ -39,23 +47,24 @@ rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
 # export variables for Score-P
 export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${PBS_JOBID}
 export SCOREP_ENABLE_PROFILING=true
+export SCOREP_ENABLE_TRACING=true
 export SCOREP_ENABLE_UNWINDING=true
-export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@200000
-export SCOREP_TOTAL_MEMORY=1024M
+export SCOREP_TOTAL_MEMORY=100M
+export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=33
 
 # start runs
-echo "Multiple Node Profiling: petsc-ksp-scorep" > ${LOG}
-echo "=======================================" >> ${LOG}
+echo "Multiple-Node Profiling: petsc-ksp-scorep-original" > ${LOG}
+echo "==================================================" >> ${LOG}
 
 date >> ${LOG}
 echo "" >> ${LOG}
 
-echo "1024 Cores" >> ${LOG}
+echo "64 Cores" >> ${LOG}
 echo "--------" >> ${LOG}
-aprun -n 1024 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep \
-    -da_grid_x 500 \
-    -da_grid_y 500 \
-    -da_grid_z 500 \
+aprun -n 64 ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-scorep-original \
+    -da_grid_x 300 \
+    -da_grid_y 300 \
+    -da_grid_z 300 \
     -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
 echo "" >> ${LOG}
 echo "" >> ${LOG}
