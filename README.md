@@ -75,9 +75,11 @@ At top-level directory:
   **src/original**, and then create OpenACC kernels in **src/openacc**
 * `make all`: build all executables
 * `make <executable>`: build an individual executable
-* `make PROJ=<chargeable project> <PBS run>`: submit a run under **runs**
-  directory using the allocation of *\<chargeable proj\>*; or you can use
-  alternative command `qsub -v PROJ=<chargeable project> runs/<PBS job>.pbs`
+* `make PROJ=<chargeable project> PROJFOLDER=<useable folder $MEMBERWORK> <PBS
+   run>`: submit a run under **runs** directory using the allocation of 
+   *\<chargeable proj\>*; or you can use alternative command `qsub -A
+  <chargeable project> -v PROJFOLDER=<usable folder under $MEMBERWORK> runs/<PBS
+  job>.pbs`. `PROJFOLDER` will be used as temporary work directory.
 * `make clean-build`: clean executables and object files
 * `make clean-petsc`: clean build PETSc library
 * `make clean-all`: clean everything

@@ -161,7 +161,7 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.c
 
 # rule to run PBS script in directory "runs"
 ${RUNS}:
-	qsub -v PROJ=${PROJ} $(subst run-, runs/, $@).pbs
+	qsub -A ${PROJ} -v PROJFOLDER=${PROJFOLDER} $(subst run-, runs/, $@).pbs
 
 # check and create necessary directories
 check-dir:

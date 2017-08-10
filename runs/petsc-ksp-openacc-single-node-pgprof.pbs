@@ -1,6 +1,5 @@
 #!/bin/bash -l
 
-#PBS -A gen010interns
 #PBS -j oe
 #PBS -l walltime=1:00:00
 #PBS -l nodes=1
@@ -8,11 +7,11 @@
 #PBS -m e
 #PBS -M chuangp@ornl.gov
 
-# check if variable PROJ is set and if ${MEMBERWORK}/${PROJ} is valid
-if [[ ! -d ${MEMBERWORK}/${PROJ:?PROJ should be set first} ]];
+# check if variable PROJFOLDER is set and if ${MEMBERWORK}/${PROJFOLDER} is valid
+if [[ ! -d ${MEMBERWORK}/${PROJFOLDER:?PROJFOLDER should be set first} ]];
 then
-    printf "${MEMBEROWRK}/${PROJ} is not usable!\n"
-    printf "Please check both MEMBERWORK and PROJ are set correctly!\n"
+    printf "${MEMBEROWRK}/${PROJFOLDER} is not usable!\n"
+    printf "Please check both MEMBERWORK and PROJFOLDER are set correctly!\n"
     exit
 fi
 
@@ -38,15 +37,15 @@ if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
 # create folder for profiling results
 mkdir ${RUN_PATH}/${RUN}-${PBS_JOBID}
 
-# sync the run folder to ${MEMBERWORK}/${PROJ}
-rsync -Pravq --delete ${RUN_PATH} ${MEMBERWORK}/${PROJ}
+# sync the run folder to ${MEMBERWORK}/${PROJFOLDER}
+rsync -Pravq --delete ${RUN_PATH} ${MEMBERWORK}/${PROJFOLDER}
 
-# change the current path to ${MEMBERWORK}/${PROJ}/${RUN}
-cd ${MEMBERWORK}/${PROJ}/${RUN}
+# change the current path to ${MEMBERWORK}/${PROJFOLDER}/${RUN}
+cd ${MEMBERWORK}/${PROJFOLDER}/${RUN}
 
 # sync necessary files here for running on computing nodes
-rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJ}
-rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJ}
+rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJFOLDER}
+rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJFOLDER}
 
 # export the variable for using GPU with multiple MPI processes
 unset CUDA_LAUNCH_BLOCKING
@@ -63,18 +62,18 @@ echo "16 Cores" >> ${LOG}
 echo "--------" >> ${LOG}
 aprun -n 16 \
     pgprof \
-    --export-profile ${MEMBERWORK}/${PROJ}/${RUN}/${RUN}-${PBS_JOBID}/rank.%q{ALPS_APP_PE}.nvvp \
+    --export-profile ${MEMBERWORK}/${PROJFOLDER}/${RUN}/${RUN}-${PBS_JOBID}/rank.%q{ALPS_APP_PE}.nvvp \
     --cpu-profiling on \
     --cpu-profiling-scope function \
     --openacc-profiling on \
     --concurrent-kernels on \
-        ${MEMBERWORK}/${PROJ}/bin/petsc-ksp-pgprof-openacc \
+        ${MEMBERWORK}/${PROJFOLDER}/bin/petsc-ksp-pgprof-openacc \
         -da_grid_x 300 \
         -da_grid_y 300 \
         -da_grid_z 300 \
-        -config $MEMBERWORK/${PROJ}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
+        -config $MEMBERWORK/${PROJFOLDER}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
 echo "" >> ${LOG}
 echo "" >> ${LOG}
 
-# sync the results in ${MEMBERWORK}/${PROJ}/${RUN} to ${RUN_PATH}
-rsync -Pravq ${MEMBERWORK}/${PROJ}/${RUN} ${RUN_BASE}
+# sync the results in ${MEMBERWORK}/${PROJFOLDER}/${RUN} to ${RUN_PATH}
+rsync -Pravq ${MEMBERWORK}/${PROJFOLDER}/${RUN} ${RUN_BASE}
