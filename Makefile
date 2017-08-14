@@ -33,7 +33,10 @@ PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 
 # executable binary files
 EXE = petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
-	  petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc
+	  petsc-ksp-openacc-step1 petsc-ksp-scorep-openacc-step1 petsc-ksp-pgprof-openacc-step1 \
+	  petsc-ksp-openacc-step2 petsc-ksp-scorep-openacc-step2 petsc-ksp-pgprof-openacc-step2 \
+	  petsc-ksp-openacc-step3 petsc-ksp-scorep-openacc-step3 petsc-ksp-pgprof-openacc-step3 \
+	  petsc-ksp-openacc-step4 petsc-ksp-scorep-openacc-step4 petsc-ksp-pgprof-openacc-step4
 
 # PBS job targets
 RUNS := $(subst .pbs, , $(subst runs/, run-, $(wildcard runs/*.pbs)))
@@ -167,7 +170,10 @@ ${RUNS}:
 check-dir:
 	@if [ ! -d ${OBJDIR} ]; then mkdir ${OBJDIR}; fi
 	@if [ ! -d ${OBJDIR}/original ]; then mkdir ${OBJDIR}/original; fi
-	@if [ ! -d ${OBJDIR}/openacc ]; then mkdir ${OBJDIR}/openacc; fi
+	@if [ ! -d ${OBJDIR}/openacc-step1 ]; then mkdir ${OBJDIR}/openacc-step1; fi
+	@if [ ! -d ${OBJDIR}/openacc-step2 ]; then mkdir ${OBJDIR}/openacc-step2; fi
+	@if [ ! -d ${OBJDIR}/openacc-step3 ]; then mkdir ${OBJDIR}/openacc-step3; fi
+	@if [ ! -d ${OBJDIR}/openacc-step4 ]; then mkdir ${OBJDIR}/openacc-step4; fi
 	@if [ ! -d ${BINDIR} ]; then mkdir ${BINDIR}; fi
 
 # clean executables and object files

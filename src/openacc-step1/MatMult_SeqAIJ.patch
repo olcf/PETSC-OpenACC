@@ -1,0 +1,32 @@
+--- ../original/MatMult_SeqAIJ.c	2017-08-14 15:28:14.302854000 -0400
++++ MatMult_SeqAIJ.c	2017-08-14 14:14:23.000000000 -0400
+@@ -46,11 +46,27 @@
+     aa   = a->a;
+     fortranmultaij_(&m,x,ii,aj,aa,y);
+ #else
++
++    // alias to CSR data
++    const MatScalar *data = a->a;
++    const PetscInt *cols = a->j;
++
++    // variable for size of x array
++    PetscInt xSize;
++
++    // get size of x array
++    ierr = VecGetLocalSize(xx, &xSize); CHKERRQ(ierr);
++
++    // GPU kernels
++    # pragma acc kernels loop independent gang vector(32) \
++      copyin(ii[:m+1] , cols[:a->nz], data[:a->nz], x[:xSize]) \
++      copyout(y[:m])
+     for (i=0; i<m; i++) {
+       n           = ii[i+1] - ii[i];
+-      aj          = a->j + ii[i];
+-      aa          = a->a + ii[i];
++      aj          = cols + ii[i];
++      aa          = data + ii[i];
+       sum         = 0.0;
++      # pragma acc loop seq reduction(+:sum)
+       PetscSparseDensePlusDot(sum,x,aa,aj,n);
+       y[i] = sum;
+     }
