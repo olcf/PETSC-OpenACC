@@ -31,16 +31,17 @@ KERNEL = MatAssemblyEnd_SeqAIJ.c MatDestroy_SeqAIJ.c MatMult_SeqAIJ.c
 # PETSc
 PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 
+# basic binaries. Each sub folder in src means a binary exectuable.
+BASIC := $(subst /, ,$(subst src/, ,$(dir $(wildcard src/*/.))))
+
 # executable binary files
-EXE = original scorep-original pgprof-original \
-	  openacc-final scorep-openacc-final pgprof-openacc-final \
-	  openacc-step1 scorep-openacc-step1 pgprof-openacc-step1 \
-	  openacc-step2 scorep-openacc-step2 pgprof-openacc-step2 \
-	  openacc-step3 scorep-openacc-step3 pgprof-openacc-step3 \
-	  openacc-step4 scorep-openacc-step4 pgprof-openacc-step4
+EXE = ${BASIC} $(foreach i, ${BASIC}, scorep-${i}) $(foreach i, ${BASIC}, pgprof-${i})
 
 # PBS job targets
-RUNS := $(subst .pbs, , $(subst runs/, run-, $(wildcard runs/*.pbs)))
+RUNS = $(foreach i, ${BASIC}, single-node-scaling-${i}) \
+	   $(foreach i, ${BASIC}, single-node-profiling-${i}) \
+	   $(foreach i, ${BASIC}, single-node-pgprof-${i}) \
+	   $(foreach i, ${BASIC}, multiple-node-scaling-${i})
 
 # phony targets
 .PHONY: help list-executables list-runs all build-petsc \
@@ -164,17 +165,32 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.c
 	${CXX} -c -o $@ $< ${CXXFLAGS}
 
 # rule to run PBS script in directory "runs"
-${RUNS}:
-	qsub -A ${PROJ} -v PROJFOLDER=${PROJFOLDER} $(subst run-, runs/, $@).pbs
+$(filter single-node-scaling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=$(subst single-node-scaling-,,$@) \
+		runs/single-node-scaling.pbs
+
+$(filter single-node-profiling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=scorep-$(subst single-node-profiling-,,$@) \
+		runs/single-node-profiling.pbs
+
+$(filter single-node-pgprof-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=pgprof-$(subst single-node-pgprof-,,$@) \
+		runs/single-node-pgprof.pbs
+
+$(filter multiple-node-scaling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=$(subst multiple-node-scaling-,,$@) \
+		runs/multiple-node-scaling.pbs
 
 # check and create necessary directories
 check-dir:
 	@if [ ! -d ${OBJDIR} ]; then mkdir ${OBJDIR}; fi
-	@if [ ! -d ${OBJDIR}/original ]; then mkdir ${OBJDIR}/original; fi
-	@if [ ! -d ${OBJDIR}/openacc-step1 ]; then mkdir ${OBJDIR}/openacc-step1; fi
-	@if [ ! -d ${OBJDIR}/openacc-step2 ]; then mkdir ${OBJDIR}/openacc-step2; fi
-	@if [ ! -d ${OBJDIR}/openacc-step3 ]; then mkdir ${OBJDIR}/openacc-step3; fi
-	@if [ ! -d ${OBJDIR}/openacc-step4 ]; then mkdir ${OBJDIR}/openacc-step4; fi
+	@for i in ${BASIC}; do \
+		if [ ! -d ${OBJDIR}/$${i} ]; then mkdir ${OBJDIR}/$${i}; fi; \
+	done
 	@if [ ! -d ${BINDIR} ]; then mkdir ${BINDIR}; fi
 
 # clean executables and object files
