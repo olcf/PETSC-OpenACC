@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #PBS -j oe
-#PBS -l walltime=1:00:00
+#PBS -l walltime=2:00:00
 #PBS -l nodes=64
 #PBS -l gres=atlas1%atlas2
 #PBS -m e
@@ -28,7 +28,7 @@ RUN_BASE=${PBS_O_WORKDIR}/runs
 RUN_PATH=${RUN_BASE}/${RUN}
 
 # the path to the log file
-LOG=${RUN_PATH}/${RUN}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
+LOG=${RUN_PATH}/${RUN}-${EXEC}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
 
 # create the RUN_PATH if it does not exist
 if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
@@ -47,7 +47,7 @@ rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJFOLDER}
 export CRAY_CUDA_PROXY=1
 
 # start runs
-echo "Multiple-Node Strong Scaling: petsc-ksp-openacc" > ${LOG}
+echo "Multiple-Node Strong Scaling: ${EXEC}" > ${LOG}
 echo "================================================" >> ${LOG}
 
 date >> ${LOG}
@@ -56,7 +56,7 @@ echo "" >> ${LOG}
 # loop through and throw all jobs, let system handle resource distribution
 for i in 1024 512 256 128 64 32 16
 do
-    nohup aprun -n ${i} ${MEMBERWORK}/${PROJFOLDER}/bin/petsc-ksp-openacc \
+    nohup aprun -n ${i} ${MEMBERWORK}/${PROJFOLDER}/bin/${EXEC} \
         -da_grid_x 300 \
         -da_grid_y 300 \
         -da_grid_z 300 \

@@ -32,11 +32,12 @@ KERNEL = MatAssemblyEnd_SeqAIJ.c MatDestroy_SeqAIJ.c MatMult_SeqAIJ.c
 PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 
 # executable binary files
-EXE = petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
-	  petsc-ksp-openacc-step1 petsc-ksp-scorep-openacc-step1 petsc-ksp-pgprof-openacc-step1 \
-	  petsc-ksp-openacc-step2 petsc-ksp-scorep-openacc-step2 petsc-ksp-pgprof-openacc-step2 \
-	  petsc-ksp-openacc-step3 petsc-ksp-scorep-openacc-step3 petsc-ksp-pgprof-openacc-step3 \
-	  petsc-ksp-openacc-step4 petsc-ksp-scorep-openacc-step4 petsc-ksp-pgprof-openacc-step4
+EXE = original scorep-original pgprof-original \
+	  openacc-final scorep-openacc-final pgprof-openacc-final \
+	  openacc-step1 scorep-openacc-step1 pgprof-openacc-step1 \
+	  openacc-step2 scorep-openacc-step2 pgprof-openacc-step2 \
+	  openacc-step3 scorep-openacc-step3 pgprof-openacc-step3 \
+	  openacc-step4 scorep-openacc-step4 pgprof-openacc-step4
 
 # PBS job targets
 RUNS := $(subst .pbs, , $(subst runs/, run-, $(wildcard runs/*.pbs)))
@@ -111,21 +112,21 @@ build-petsc: ${PETSCLIB}
 ${EXE}: %: ${PETSCLIB} check-dir ${BINDIR}/%
 
 # real target that creates petsc-ksp-scorep-*
-${BINDIR}/petsc-ksp-scorep-%: \
+${BINDIR}/scorep-%: \
 	$(foreach i, $(SRC:.cpp=.scorep.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.scorep.o), ${OBJDIR}/%/${i})
 
 	scorep ${SCOREP_FLAGS} ${CXX} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
 # real target that creates petsc-ksp-pgprof-*
-${BINDIR}/petsc-ksp-pgprof-%: \
+${BINDIR}/pgprof-%: \
 	$(foreach i, $(SRC:.cpp=.pgprof.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.pgprof.o), ${OBJDIR}/%/${i})
 
 	${CXX} ${PGPROF_FLAGS} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
 # real target that creates petsc-ksp-*
-${BINDIR}/petsc-ksp-%: \
+${BINDIR}/%: \
 	$(foreach i, $(SRC:.cpp=.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.o), ${OBJDIR}/%/${i})
 
