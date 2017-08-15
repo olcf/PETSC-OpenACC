@@ -98,26 +98,31 @@ sed -i "s/make\ -f\ tmpmakefile\ '+make_target/make\ -j16\ -f\ tmpmakefile\ '+ma
     petsc-3.7.6/config/BuildSystem/config/packages/f2cblaslapack.py
 printf "done.\n"
 
-# create OpenACC version of kernel based on PETSc original kernel
-printf "Creating OpenACC kernels based on original PETSc kernels ... "
-rm -f ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.c
-rm -f ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.c
-rm -f ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.c
+# create OpenACC version of kernels based on PETSc original kernel
+printf "Creating OpenACC kernels based on original PETSc kernels ...\n\n"
 
-patch -N \
-    -i ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.patch \
-    -o ${WORKING_DIR}/src/openacc/MatAssemblyEnd_SeqAIJ.c \
-    ${WORKING_DIR}/src/original/MatAssemblyEnd_SeqAIJ.c
+rm -f ${WORKING_DIR}/src/openacc-step*/*.c
 
-patch -N \
-    -i ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.patch \
-    -o ${WORKING_DIR}/src/openacc/MatDestroy_SeqAIJ.c \
-    ${WORKING_DIR}/src/original/MatDestroy_SeqAIJ.c
+for i in {1..4};
+do
+    printf "\tPatching openacc-step${i} ...\n\n"
 
-patch -N \
-    -i ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.patch \
-    -o ${WORKING_DIR}/src/openacc/MatMult_SeqAIJ.c \
-    ${WORKING_DIR}/src/original/MatMult_SeqAIJ.c
+    for p in ${WORKING_DIR}/src/openacc-step${i}/*.patch;
+    do
+        name=$(basename ${p})
+
+        patch -N \
+            -i ${WORKING_DIR}/src/openacc-step${i}/${name} \
+            -o ${WORKING_DIR}/src/openacc-step${i}/${name%.*}.c \
+            ${WORKING_DIR}/src/original/${name%.*}.c
+    done
+
+    printf "\n"
+done
+
+cp ${WORKING_DIR}/src/original/MatAssemblyEnd_SeqAIJ.c ${WORKING_DIR}/src/openacc-step1
+cp ${WORKING_DIR}/src/original/MatDestroy_SeqAIJ.c ${WORKING_DIR}/src/openacc-step1
+
 printf "done.\n"
 
 

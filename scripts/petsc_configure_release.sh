@@ -11,12 +11,12 @@
     \
     --with-cc="cc"                                      \
     --with-clib-autodetect=0                            \
-    --CFLAGS="-w"                                       \
+    --CFLAGS="-w -tp=bulldozer-64 -O3 -fast -Mnodwarf"  \
     --COPTFLAGS=""                                      \
     \
     --with-cxx="CC"                                     \
     --with-cxxlib-autodetect=0                          \
-    --CXXFLAGS="-w"                                     \
+    --CXXFLAGS="-w -tp=bulldozer-64 -O3 -fast -Mnodwarf"\
     --CXXOPTFLAGS=""                                    \
     \
     --with-fc=0                                         \

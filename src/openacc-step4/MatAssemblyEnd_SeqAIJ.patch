@@ -1,0 +1,47 @@
+--- ../original/MatAssemblyEnd_SeqAIJ.c	2017-08-14 15:28:14.294861000 -0400
++++ MatAssemblyEnd_SeqAIJ.c	2017-08-14 14:28:51.000000000 -0400
+@@ -3,6 +3,9 @@
+ #include <petscbt.h>
+ #include <petsc/private/kernels/blocktranspose.h>
+ 
++// OpenACC header
++# include <openacc.h>
++
+ #undef __FUNCT__
+ #define __FUNCT__ "MatAssemblyEnd_SeqAIJ"
+ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A,MatAssemblyType mode)
+@@ -17,6 +20,20 @@
+   PetscFunctionBegin;
+   if (mode == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(0);
+ 
++  // variables to store if data of this mat has already been on device
++  int present[3];
++
++  // check if CSR data is on device
++  present[0] = acc_is_present(ai, (A->rmap->n+1)*sizeof(PetscInt));
++  present[1] = acc_is_present(aj, (a->nz)*sizeof(PetscInt));
++  present[2] = acc_is_present(aa, (a->nz)*sizeof(MatScalar));
++
++  // if it is, then remove them from device, in case this host routine
++  // re-allocate the array with different size. "row" array is not removed
++  // because it unlikely "row" array will change size.
++  # pragma acc exit data delete(aj[:a->nz]) if(present[1]) async
++  # pragma acc exit data delete(aa[:a->nz]) if(present[2]) async
++
+   if (m) rmax = ailen[0]; /* determine row with most nonzeros */
+   for (i=1; i<m; i++) {
+     /* move each row back by the amount of empty slots (fshift) before it*/
+@@ -60,5 +77,13 @@
+   ierr = MatCheckCompressedRow(A,a->nonzerorowcnt,&a->compressedrow,a->i,m,ratio);CHKERRQ(ierr);
+   ierr = MatAssemblyEnd_SeqAIJ_Inode(A,mode);CHKERRQ(ierr);
+   ierr = MatSeqAIJInvalidateDiagonal(A);CHKERRQ(ierr);
++
++  // update/upload new data. While "row" array may not change size, it may have
++  // different values, so we update it. And then re-upload the other two arrays
++  // if this mat had data on device prior this routine.
++  # pragma acc update device(ai[0:A->rmap->n+1]) if(present[0]) async
++  # pragma acc enter data copyin(aj[0:a->nz]) if(present[1]) async
++  # pragma acc enter data copyin(aa[0:a->nz]) if(present[2]) async
++
+   PetscFunctionReturn(0);
+ }

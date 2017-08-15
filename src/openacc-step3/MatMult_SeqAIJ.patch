@@ -1,0 +1,74 @@
+--- ../original/MatMult_SeqAIJ.c	2017-08-14 15:28:14.302854000 -0400
++++ MatMult_SeqAIJ.c	2017-08-14 14:26:52.000000000 -0400
+@@ -3,6 +3,9 @@
+ #include <petscbt.h>
+ #include <petsc/private/kernels/blocktranspose.h>
+ 
++// OpenACC header
++# include <openacc.h>
++
+ #undef __FUNCT__
+ #define __FUNCT__ "MatMult_SeqAIJ"
+ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
+@@ -46,14 +49,58 @@
+     aa   = a->a;
+     fortranmultaij_(&m,x,ii,aj,aa,y);
+ #else
+-    for (i=0; i<m; i++) {
++
++    // alias to CSR data
++    const MatScalar *data = a->a;
++    const PetscInt *cols = a->j;
++
++    // variable for size of x array
++    PetscInt xSize;
++
++    // get size of x array
++    ierr = VecGetLocalSize(xx, &xSize); CHKERRQ(ierr);
++
++    // upload matrix if it does not exist on device
++    # pragma acc enter data copyin(ii[:m+1]) async
++    # pragma acc enter data copyin(cols[:a->nz]) async
++    # pragma acc enter data copyin(data[:a->nz]) async
++
++    // upload vector x
++    # pragma acc enter data copyin(x[:xSize]) async
++
++    // do some calculations on CPU while we are waiting for data transfer
++    PetscInt offset = 0;
++    while((! acc_async_test_all()) && (offset < m))
++    {
++      n           = ii[offset+1] - ii[offset];
++      aj          = cols + ii[offset];
++      aa          = data + ii[offset];
++      sum         = 0.0;
++      PetscSparseDensePlusDot(sum,x,aa,aj,n);
++      y[offset] = sum;
++      offset += 1;
++    }
++
++    // calculate number of remaining rows.
++    PetscInt remain = m - offset;
++
++    // GPU kernels
++    # pragma acc kernels loop independent gang vector(32) \
++      present(ii[:m+1], cols[:a->nz], data[:a->nz], x[:xSize]) \
++      copyout(y[offset:remain])
++    for (i=offset; i<m; i++) {
+       n           = ii[i+1] - ii[i];
+-      aj          = a->j + ii[i];
+-      aa          = a->a + ii[i];
++      aj          = cols + ii[i];
++      aa          = data + ii[i];
+       sum         = 0.0;
++      # pragma acc loop seq reduction(+:sum)
+       PetscSparseDensePlusDot(sum,x,aa,aj,n);
+       y[i] = sum;
+     }
++
++    // delete vector x
++    # pragma acc exit data delete(x[:xSize]) async
++
+ #endif
+   }
+   ierr = PetscLogFlops(2.0*a->nz - a->nonzerorowcnt);CHKERRQ(ierr);

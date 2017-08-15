@@ -17,6 +17,7 @@ fi
 
 # source environment variables
 source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
+module switch pgi pgi/17.5.0
 
 # the name to this run case
 RUN=`basename "${PBS_JOBNAME}" ".pbs"`
@@ -28,10 +29,14 @@ RUN_BASE=${PBS_O_WORKDIR}/runs
 RUN_PATH=${RUN_BASE}/${RUN}
 
 # the path to the log file
-LOG=${RUN_PATH}/${RUN}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
+LOG=${RUN_PATH}/${RUN}-${EXEC}-${PBS_JOBID}-`date +%Y%m%d-%X`.log
 
-# create the RUN_PATH if it does not exist
+# create the RUN_PATH is it does not exist
 if [ ! -d ${RUN_PATH} ]; then mkdir ${RUN_PATH}; fi
+
+# create folder for profiling results
+PROF_DIR=${RUN}-${EXEC}-${PBS_JOBID}
+mkdir ${RUN_PATH}/${PROF_DIR}
 
 # sync the run folder to ${MEMBERWORK}/${PROJFOLDER}
 rsync -Pravq --delete ${RUN_PATH} ${MEMBERWORK}/${PROJFOLDER}
@@ -43,25 +48,34 @@ cd ${MEMBERWORK}/${PROJFOLDER}/${RUN}
 rsync -Pravq ${RUN_BASE}/../bin ${MEMBERWORK}/${PROJFOLDER}
 rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJFOLDER}
 
+# export the variable for using GPU with multiple MPI processes
+unset CUDA_LAUNCH_BLOCKING
+export CRAY_CUDA_PROXY=1
+
 # start runs
-echo "Single Node Strong Scaling: petsc-ksp-original" > ${LOG}
-echo "==============================================" >> ${LOG}
+echo "Single Node Profiling: ${EXEC}" > ${LOG}
+echo "================================================" >> ${LOG}
 
 date >> ${LOG}
 echo "" >> ${LOG}
 
-for i in 16 8 4 2 1
-do
-    echo "${i} Cores" >> ${LOG}
-    echo "--------" >> ${LOG}
-    aprun -n ${i} ${MEMBERWORK}/${PROJFOLDER}/bin/petsc-ksp-original \
+echo "16 Cores" >> ${LOG}
+echo "--------" >> ${LOG}
+aprun -n 16 \
+    pgprof \
+    --export-profile \
+        ${MEMBERWORK}/${PROJFOLDER}/${RUN}/${PROF_DIR}/rank.%q{ALPS_APP_PE}.nvvp \
+    --cpu-profiling on \
+    --cpu-profiling-scope function \
+    --openacc-profiling on \
+    --concurrent-kernels on \
+    ${MEMBERWORK}/${PROJFOLDER}/bin/${EXEC} \
         -da_grid_x 300 \
         -da_grid_y 300 \
         -da_grid_z 300 \
         -config $MEMBERWORK/${PROJFOLDER}/configs/PETSc_SolverOptions_GAMG.info >> ${LOG}
-    echo "" >> ${LOG}
-    echo "" >> ${LOG}
-done
+echo "" >> ${LOG}
+echo "" >> ${LOG}
 
 # sync the results in ${MEMBERWORK}/${PROJFOLDER}/${RUN} to ${RUN_PATH}
 rsync -Pravq ${MEMBERWORK}/${PROJFOLDER}/${RUN} ${RUN_BASE}

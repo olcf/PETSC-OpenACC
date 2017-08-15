@@ -6,11 +6,11 @@
 
 # set up environment
 CXX = CC
-CXXFLAGS = -std=c++11 -w \
+CXXFLAGS = -std=c++11 -w -tp=bulldozer-64 -O3 -fast -Mnodwarf \
 		   -acc -ta=host,tesla:cc35 -Minfo=accel \
 		   -I./extra/petsc-3.7.6/include \
 		   -I./extra/petsc-3.7.6/RELEASE-TITAN/include
-LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel
+LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel -tp=bulldozer-64 -O3 -fast -Mnodwarf
 
 # directories
 SRCDIR = ./src
@@ -31,12 +31,17 @@ KERNEL = MatAssemblyEnd_SeqAIJ.c MatDestroy_SeqAIJ.c MatMult_SeqAIJ.c
 # PETSc
 PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
 
+# basic binaries. Each sub folder in src means a binary exectuable.
+BASIC := $(subst /, ,$(subst src/, ,$(dir $(wildcard src/*/.))))
+
 # executable binary files
-EXE = petsc-ksp-original petsc-ksp-scorep-original petsc-ksp-pgprof-original \
-	  petsc-ksp-openacc petsc-ksp-scorep-openacc petsc-ksp-pgprof-openacc
+EXE = ${BASIC} $(foreach i, ${BASIC}, scorep-${i}) $(foreach i, ${BASIC}, pgprof-${i})
 
 # PBS job targets
-RUNS := $(subst .pbs, , $(subst runs/, run-, $(wildcard runs/*.pbs)))
+RUNS = $(foreach i, ${BASIC}, single-node-scaling-${i}) \
+	   $(foreach i, ${BASIC}, single-node-profiling-${i}) \
+	   $(foreach i, ${BASIC}, single-node-pgprof-${i}) \
+	   $(foreach i, ${BASIC}, multiple-node-scaling-${i})
 
 # phony targets
 .PHONY: help list-executables list-runs all build-petsc \
@@ -108,21 +113,21 @@ build-petsc: ${PETSCLIB}
 ${EXE}: %: ${PETSCLIB} check-dir ${BINDIR}/%
 
 # real target that creates petsc-ksp-scorep-*
-${BINDIR}/petsc-ksp-scorep-%: \
+${BINDIR}/scorep-%: \
 	$(foreach i, $(SRC:.cpp=.scorep.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.scorep.o), ${OBJDIR}/%/${i})
 
 	scorep ${SCOREP_FLAGS} ${CXX} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
 # real target that creates petsc-ksp-pgprof-*
-${BINDIR}/petsc-ksp-pgprof-%: \
+${BINDIR}/pgprof-%: \
 	$(foreach i, $(SRC:.cpp=.pgprof.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.pgprof.o), ${OBJDIR}/%/${i})
 
 	${CXX} ${PGPROF_FLAGS} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
 
 # real target that creates petsc-ksp-*
-${BINDIR}/petsc-ksp-%: \
+${BINDIR}/%: \
 	$(foreach i, $(SRC:.cpp=.o), ${OBJDIR}/${i})\
 	$(foreach i, $(KERNEL:.c=.o), ${OBJDIR}/%/${i})
 
@@ -160,14 +165,32 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.c
 	${CXX} -c -o $@ $< ${CXXFLAGS}
 
 # rule to run PBS script in directory "runs"
-${RUNS}:
-	qsub -A ${PROJ} -v PROJFOLDER=${PROJFOLDER} $(subst run-, runs/, $@).pbs
+$(filter single-node-scaling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=$(subst single-node-scaling-,,$@) \
+		runs/single-node-scaling.pbs
+
+$(filter single-node-profiling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=scorep-$(subst single-node-profiling-,,$@) \
+		runs/single-node-profiling.pbs
+
+$(filter single-node-pgprof-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=pgprof-$(subst single-node-pgprof-,,$@) \
+		runs/single-node-pgprof.pbs
+
+$(filter multiple-node-scaling-%,${RUNS}):
+	qsub -A ${PROJ} \
+		-v PROJFOLDER=${PROJFOLDER},EXEC=$(subst multiple-node-scaling-,,$@) \
+		runs/multiple-node-scaling.pbs
 
 # check and create necessary directories
 check-dir:
 	@if [ ! -d ${OBJDIR} ]; then mkdir ${OBJDIR}; fi
-	@if [ ! -d ${OBJDIR}/original ]; then mkdir ${OBJDIR}/original; fi
-	@if [ ! -d ${OBJDIR}/openacc ]; then mkdir ${OBJDIR}/openacc; fi
+	@for i in ${BASIC}; do \
+		if [ ! -d ${OBJDIR}/$${i} ]; then mkdir ${OBJDIR}/$${i}; fi; \
+	done
 	@if [ ! -d ${BINDIR} ]; then mkdir ${BINDIR}; fi
 
 # clean executables and object files

@@ -2,6 +2,8 @@ bin/
 extra/
 obj/
 runs/**/
+src/original
+src/openacc-step*/*.c
 
 *.pbs.o*
 *.OU

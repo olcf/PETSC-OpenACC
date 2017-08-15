@@ -1,0 +1,38 @@
+--- ../original/MatDestroy_SeqAIJ.c	2017-08-14 15:28:14.298856000 -0400
++++ MatDestroy_SeqAIJ.c	2017-08-14 14:27:36.000000000 -0400
+@@ -3,6 +3,9 @@
+ #include <petscbt.h>
+ #include <petsc/private/kernels/blocktranspose.h>
+ 
++// OpenACC header
++# include <openacc.h>
++
+ #undef __FUNCT__
+ #define __FUNCT__ "MatDestroy_SeqAIJ"
+ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
+@@ -14,6 +17,25 @@
+ #if defined(PETSC_USE_LOG)
+   PetscLogObjectState((PetscObject)A,"Rows=%D, Cols=%D, NZ=%D",A->rmap->n,A->cmap->n,a->nz);
+ #endif
++
++  // variables for saving if CSR data is on device
++  int present[3];
++
++  // alias to CSR data
++  PetscInt *ai = a->i;
++  PetscInt *aj = a->j;
++  MatScalar *aa = a->a;
++
++  // check if CSR data is on device
++  present[0] = acc_is_present(ai, (A->rmap->n+1)*sizeof(PetscInt));
++  present[1] = acc_is_present(aj, (a->nz)*sizeof(PetscInt));
++  present[2] = acc_is_present(aa, (a->nz)*sizeof(MatScalar));
++
++  // if it is, delete them
++  # pragma acc exit data delete(ai[0:A->rmap->n+1]) if(present[0])
++  # pragma acc exit data delete(aj[0:a->nz]) if(present[1])
++  # pragma acc exit data delete(aa[0:a->nz]) if(present[2])
++
+   ierr = MatSeqXAIJFreeAIJ(A,&a->a,&a->j,&a->i);CHKERRQ(ierr);
+   ierr = ISDestroy(&a->row);CHKERRQ(ierr);
+   ierr = ISDestroy(&a->col);CHKERRQ(ierr);
