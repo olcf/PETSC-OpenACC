@@ -6,11 +6,11 @@
 
 # set up environment
 CXX = CC
-CXXFLAGS = -std=c++11 -w \
+CXXFLAGS = -std=c++11 -w -tp=bulldozer-64 -O3 -fast -Mnodwarf \
 		   -acc -ta=host,tesla:cc35 -Minfo=accel \
 		   -I./extra/petsc-3.7.6/include \
 		   -I./extra/petsc-3.7.6/RELEASE-TITAN/include
-LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel
+LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel -tp=bulldozer-64 -O3 -fast -Mnodwarf
 
 # directories
 SRCDIR = ./src
