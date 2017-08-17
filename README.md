@@ -82,6 +82,20 @@ At top-level directory:
 * `make clean-build`: clean executables and object files
 * `make clean-petsc`: clean build PETSc library
 * `make clean-all`: clean everything
+* `make create-plots`: create plots for strong scaling and speedups according to result
+  files under the folder **runs**. Must get some results (e.g. run some PBS jobs first)
+  prior calling this target.
+
+## Example Results on Titan
+------------------------------
+Results from a 300x300x300 Poisson problem. For single-node tests, 1, 2, 4, 8, and 16 CPU
+cores and 1 K20x GPU were used on a Titan node. For multiple-node tests, 1, 2, 4, 8, 16,
+32, and 64 Titan nodes were used (16 CPU cores + 1 K20x GPU per node).
+
+![Fig. 1](./results/strong_scaling_single-node-scaling.png)
+![Fig. 2](./results/speed_up_single-node-scaling.png)
+![Fig. 3](./results/strong_scaling_multiple-node-scaling.png)
+![Fig. 4](./results/speed_up_multiple-node-scaling.png)
 
 ## Contact
 
