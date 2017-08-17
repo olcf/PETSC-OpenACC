@@ -12,6 +12,10 @@ generate plots from strong scaling results in folder "runs"
 
 import glob
 import re
+
+import matplotlib
+matplotlib.use('Agg')
+
 from matplotlib import pyplot
 
 
@@ -106,58 +110,95 @@ def create_scaling_plots(case, times, base_key):
         base_key [in]: the first item we want to show in legend
     """
 
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+              '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+              '#bcbd22', '#17becf']
+
     pyplot.figure()
 
-    pyplot.loglog(list(times[base_key].keys()),
-                  list(times[base_key].values()), lw=2.5, label=base_key)
+    pyplot.loglog(
+        [k for (k, v) in sorted(times[base_key].items())],
+        [v for (k, v) in sorted(times[base_key].items())],
+        lw=2.5, label=base_key, color=colors[0])
 
-    for exe, time in times.items():
+    i = 1
+    for exe, time in sorted(times.items()):
+
         if exe == base_key:
             continue
-        pyplot.loglog(list(time.keys()), list(time.values()), lw=2.5, label=exe)
+
+        pyplot.loglog(
+            [k for (k, v) in sorted(time.items())],
+            [v for (k, v) in sorted(time.items())],
+            lw=2.5, label=exe, color=colors[i])
+
+        i += 1
 
     pyplot.title("Strong scaling: {0}".format(case))
     pyplot.xlabel("Number of CPU cores")
     pyplot.ylabel("Inclusive wall time of KSPSolve")
-    pyplot.legend(loc=0)
-    pyplot.grid()
+    pyplot.axis('image')
+    pyplot.legend(loc=0, ncol=1)
+    pyplot.grid(b=True, which='major', color='k')
+    pyplot.grid(b=True, which='minor', color='k')
+
     pyplot.savefig("strong_scaling_{0}.png".format(case))
 
 
 def create_speedup_plots(case, times, base_key):
+    """create figures for speed-up bars
+
+    Args:
+        case [in]: the type of run, i.e., the PBS scipt used
+        times [in]: the out put of the function get_time_KSPSolve
+        base_key [in]: the first item we want to show in legend
     """
-    """
+
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+              '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+              '#bcbd22', '#17becf']
 
     n_groups = len(times[base_key])
     n_bars_per_group = len(times)
-    speedup = times.copy()
+    speedup = {}
+    ymax = 0.
 
     for exe in times.keys():
+        speedup[exe] = {}
         for Np in times[exe].keys():
             speedup[exe][Np] = times[base_key][Np] / times[exe][Np]
+            if speedup[exe][Np] > ymax:
+                ymax = speedup[exe][Np]
 
     pyplot.figure()
 
-    pyplot.bar([(n_bars_per_group+2)*n for n in range(n_groups)],
-               [v for (k, v) in sorted(speedup[base_key].items())], label=exe)
+    pyplot.bar(
+        [(n_bars_per_group+2)*n for n in range(n_groups)],
+        [v for (k, v) in sorted(speedup[base_key].items())],
+        label=base_key, align='edge', color=colors[0], edgecolor=colors[0])
 
     i = 1
-    for exe, s in speedup.items():
+    for exe, s in sorted(speedup.items()):
 
         if exe == base_key:
             continue
 
-        pyplot.bar([(n_bars_per_group+2)*n+i for n in range(n_groups)],
-                   [v for (k, v) in sorted(s.items())], label=exe)
+        pyplot.bar(
+            [(n_bars_per_group+2)*n+i for n in range(n_groups)],
+            [v for (k, v) in sorted(s.items())],
+            label=exe, align='edge', color=colors[i], edgecolor=colors[i])
+
         i += 1
 
-    pyplot.title("Speed of KSPSolve from {0}".format(case))
+    pyplot.title("Speedup of KSPSolve from {0}".format(case))
     pyplot.xticks(
         [(n_bars_per_group+2)*n+n_bars_per_group/2 for n in range(n_groups)],
         [k for (k, v) in sorted(speedup[base_key].items())], label=exe)
     pyplot.xlabel("Number of CPU cores")
+    pyplot.xlim((-1.5, (n_bars_per_group+2)*n_groups-0.5))
     pyplot.ylabel("Speedup of KSPSolve")
-    pyplot.legend(loc=0)
+    pyplot.ylim((0, ymax*1.25))
+    pyplot.legend(loc=0, ncol=2)
     pyplot.grid(which='both', axis='y')
     pyplot.savefig("speed_up_{0}.png".format(case))
 
@@ -181,4 +222,15 @@ if __name__ == "__main__":
         # plot strong scaling
         create_scaling_plots(case, times, "original")
 
+        # move figure to runs/<case>/
+        glob.os.rename(
+            "strong_scaling_{0}.png".format(case),
+            prefix+"/"+case+"/strong_scaling_{0}.png".format(case))
+
+        # plot speed-up bars
         create_speedup_plots(case, times, "original")
+
+        # move figure to runs/<case>/
+        glob.os.rename(
+            "speed_up_{0}.png".format(case),
+            prefix+"/"+case+"/speed_up_{0}.png".format(case))
