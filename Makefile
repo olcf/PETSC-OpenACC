@@ -44,7 +44,7 @@ RUNS = $(foreach i, ${BASIC}, single-node-scaling-${i}) \
 	   $(foreach i, ${BASIC}, multiple-node-scaling-${i})
 
 # phony targets
-.PHONY: help list-executables list-runs all build-petsc \
+.PHONY: help list-executables list-runs all build-petsc create-plots \
 	clean-build clean-petsc clean-all check-dir ${EXE} ${RUNS}
 
 # preserve object files
@@ -74,6 +74,9 @@ help:
 	@printf "List targets of PBS runs:\n"
 	@printf "\n"
 	@printf "\tmake list-runs\n"
+	@printf "\n"
+	@printf "Create plots:\n"
+	@printf "\tmake create-plots\n"
 	@printf "\n"
 
 space :=
@@ -138,7 +141,7 @@ ${PETSCLIB}: \
 	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
 
-	sh -l scripts/petsc.sh
+	@sh -l scripts/petsc.sh
 
 # underlying rule compiling C++ code with Score-P
 ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
@@ -203,5 +206,9 @@ clean-petsc:
 
 # clean everything
 clean-all: clean-build clean-petsc
+
+# create plots
+create-plots:
+	@sh -l scripts/generate_plots.sh
 
 # vim:ft=make
