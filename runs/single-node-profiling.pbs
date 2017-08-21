@@ -46,10 +46,13 @@ rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJFOLDER}
 # export variables for Score-P
 export SCOREP_EXPERIMENT_DIRECTORY=${RUN}-${EXEC}-${PBS_JOBID}
 export SCOREP_ENABLE_PROFILING=true
+export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@1000000
 export SCOREP_ENABLE_TRACING=true
 export SCOREP_ENABLE_UNWINDING=true
 export SCOREP_TOTAL_MEMORY=100M
 export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=33
+export SCOREP_CUDA_ENABLE=yes
+export SCOREP_OPENACC_ENABLE=yes
 
 # export the variable for using GPU with multiple MPI processes
 export CRAY_CUDA_PROXY=1
