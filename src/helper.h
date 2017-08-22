@@ -29,7 +29,7 @@
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode createSystem(
+extern "C" PetscErrorCode createSystem(
         const PetscInt &Nx, const PetscInt &Ny, const PetscInt &Nz,
         DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
 
@@ -45,7 +45,7 @@ PetscErrorCode createSystem(
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
+extern "C" PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
 
 
 /**
@@ -56,7 +56,7 @@ PetscErrorCode destroySystem(DM &da, Mat &A, Vec &lhs, Vec &rhs, Vec &exact);
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode generateRHS(const DM &grid, Vec &rhs);
+extern "C" PetscErrorCode generateRHS(const DM &grid, Vec &rhs);
 
 
 /**
@@ -67,7 +67,7 @@ PetscErrorCode generateRHS(const DM &grid, Vec &rhs);
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode generateExt(const DM &grid, Vec &exact);
+extern "C" PetscErrorCode generateExt(const DM &grid, Vec &exact);
 
 
 /**
@@ -78,7 +78,7 @@ PetscErrorCode generateExt(const DM &grid, Vec &exact);
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode generateA(const DM &grid, Mat &A);
+extern "C" PetscErrorCode generateA(const DM &grid, Mat &A);
 
 
 /**
@@ -93,4 +93,4 @@ PetscErrorCode generateA(const DM &grid, Mat &A);
  *
  * \return PetscErrorCode.
  */
-PetscErrorCode setRefPoint(Mat &A, Vec &rhs, const Vec &exact);
+extern "C" PetscErrorCode setRefPoint(Mat &A, Vec &rhs, const Vec &exact);
