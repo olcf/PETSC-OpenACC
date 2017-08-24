@@ -6,11 +6,13 @@
 
 # set up environment
 CXX = CC
-CXXFLAGS = -std=c++11 -w -tp=bulldozer-64 -O3 -fast -Mnodwarf \
+CXXFLAGS = --gnu -std=c++11 -w \
+		   -tp=bulldozer-64 -O3 -fast -Mnodwarf \
 		   -acc -ta=host,tesla:cc35 -Minfo=accel \
-		   -I./extra/petsc-3.7.6/include \
-		   -I./extra/petsc-3.7.6/RELEASE-TITAN/include
-LDFLAGS = -acc -ta=host,tesla:cc35 -Minfo=accel -tp=bulldozer-64 -O3 -fast -Mnodwarf
+		   -I extra/petsc-3.7.6/include
+LDFLAGS = --gnu \
+		  -tp=bulldozer-64 -O3 -fast -Mnodwarf \
+		  -acc -ta=host,tesla:cc35 -Minfo=accel
 
 # directories
 SRCDIR = ./src
@@ -22,33 +24,45 @@ LIBDIR = ./lib
 SCOREP_FLAGS = --static --mpp=mpi --openacc --cuda
 
 # PGprof flags
-PGPROF_FLAGS = -Mprof=ccff
+NVPROF_FLAGS = -Mprof=ccff
 
 # source files
 SRC = helper.cpp main_ksp.cpp
 KERNEL = MatAssemblyEnd_SeqAIJ.c MatDestroy_SeqAIJ.c MatMult_SeqAIJ.c
 
-# PETSc
-PETSCLIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
+# PETSc Release
+PETSC_RELEASE_LIB = extra/petsc-3.7.6/RELEASE-TITAN/lib/libpetsc.a
+
+# PETSc Score-P
+PETSC_SCOREP_LIB = extra/petsc-3.7.6/SCOREP-TITAN/lib/libpetsc.a
+
+# f2cblaslapack-release
+F2CBL_RELEASE_LIB = extra/f2cblaslapack-release/libf2clapack.a \
+				   extra/f2cblaslapack-release/libf2cblas.a
+
+# f2cblaslapack-scorep
+F2CBL_SCOREP_LIB = extra/f2cblaslapack-scorep/libf2clapack.a \
+				   extra/f2cblaslapack-scorep/libf2cblas.a
 
 # basic binaries. Each sub folder in src means a binary exectuable.
 BASIC := $(subst /, ,$(subst src/, ,$(dir $(wildcard src/*/.))))
 
 # executable binary files
-EXE = ${BASIC} $(foreach i, ${BASIC}, scorep-${i}) $(foreach i, ${BASIC}, pgprof-${i})
+EXE = ${BASIC} $(foreach i, ${BASIC}, scorep-${i}) $(foreach i, ${BASIC}, nvprof-${i})
 
 # PBS job targets
 RUNS = $(foreach i, ${BASIC}, single-node-scaling-${i}) \
 	   $(foreach i, ${BASIC}, single-node-profiling-${i}) \
-	   $(foreach i, ${BASIC}, single-node-pgprof-${i}) \
+	   $(foreach i, ${BASIC}, single-node-nvprof-${i}) \
 	   $(foreach i, ${BASIC}, multiple-node-scaling-${i})
 
 # phony targets
-.PHONY: help list-executables list-runs all build-petsc create-plots \
+.PHONY: help list-executables list-runs all create-plots \
+	build-petsc build-f2cblaslapack \
 	clean-build clean-petsc clean-all check-dir ${EXE} ${RUNS}
 
 # preserve object files
-.PRECIOUS: ${OBJDIR}/%.o ${OBJDIR}/%.pgprof.o ${OBJDIR}/%.scorep.o
+.PRECIOUS: ${OBJDIR}/%.o ${OBJDIR}/%.nvprof.o ${OBJDIR}/%.scorep.o
 
 # remove all suffix implicit rules
 .SUFFIXES:
@@ -58,6 +72,7 @@ help:
 	@printf "\n"
 	@printf "Usage:\n"
 	@printf "\n"
+	@printf "\tmake build-f2cblaslapack\n"
 	@printf "\tmake build-petsc\n"
 	@printf "\tmake [make options] all\n"
 	@printf "\tmake [make options] INDIVIDUAL_EXECUTABLE_NAME\n"
@@ -110,62 +125,91 @@ list-runs:
 all: ${EXE}
 
 # build PETSc library
-build-petsc: ${PETSCLIB}
+build-petsc: build-f2cblaslapack ${PETSC_RELEASE_LIB} ${PETSC_SCOREP_LIB}
+
+# build PETSc library
+build-f2cblaslapack: ${F2CBL_RELEASE_LIB} ${F2CBL_SCOREP_LIB}
 
 # makeing an executable
-${EXE}: %: ${PETSCLIB} check-dir ${BINDIR}/%
+${EXE}: %: check-dir ${BINDIR}/%
 
 # real target that creates petsc-ksp-scorep-*
 ${BINDIR}/scorep-%: \
-	$(foreach i, $(SRC:.cpp=.scorep.o), ${OBJDIR}/${i})\
-	$(foreach i, $(KERNEL:.c=.scorep.o), ${OBJDIR}/%/${i})
+	$(foreach i, $(SRC:.cpp=.scorep.o), ${OBJDIR}/${i}) \
+	$(foreach i, $(KERNEL:.c=.scorep.o), ${OBJDIR}/%/${i}) \
+	${PETSC_SCOREP_LIB} ${F2CBL_SCOREP_LIB} 
 
-	scorep ${SCOREP_FLAGS} ${CXX} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
+	scorep ${SCOREP_FLAGS} ${CXX} -o $@ $^ ${LDFLAGS}
 
-# real target that creates petsc-ksp-pgprof-*
-${BINDIR}/pgprof-%: \
-	$(foreach i, $(SRC:.cpp=.pgprof.o), ${OBJDIR}/${i})\
-	$(foreach i, $(KERNEL:.c=.pgprof.o), ${OBJDIR}/%/${i})
+# real target that creates petsc-ksp-nvprof-*
+${BINDIR}/nvprof-%: \
+	$(foreach i, $(SRC:.cpp=.nvprof.o), ${OBJDIR}/${i}) \
+	$(foreach i, $(KERNEL:.c=.nvprof.o), ${OBJDIR}/%/${i}) \
+	${PETSC_RELEASE_LIB} ${F2CBL_RELEASE_LIB} 
 
-	${CXX} ${PGPROF_FLAGS} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
+	${CXX} ${NVPROF_FLAGS} -o $@ $^ ${LDFLAGS}
 
 # real target that creates petsc-ksp-*
 ${BINDIR}/%: \
-	$(foreach i, $(SRC:.cpp=.o), ${OBJDIR}/${i})\
-	$(foreach i, $(KERNEL:.c=.o), ${OBJDIR}/%/${i})
+	$(foreach i, $(SRC:.cpp=.o), ${OBJDIR}/${i}) \
+	$(foreach i, $(KERNEL:.c=.o), ${OBJDIR}/%/${i}) \
+	${PETSC_RELEASE_LIB} ${F2CBL_RELEASE_LIB}
 
-	${CXX} -o $@ $^ ${LDFLAGS} ${PETSCLIB}
+	${CXX} -o $@ $^ ${LDFLAGS}
 
 # underlying target to build PETSc
-${PETSCLIB}: \
+${PETSC_RELEASE_LIB}: ${F2CBL_RELEASE_LIB} \
 	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
 
-	@sh -l scripts/petsc.sh
+	@sh -l scripts/petsc.sh release
+
+${PETSC_SCOREP_LIB}: ${F2CBL_SCOREP_LIB} \
+	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
+	$(wildcard extra/petsc-3.7.6/src/**/*.h)
+
+	@sh -l scripts/petsc.sh scorep
+
+# target for building f2cblaslapack
+${F2CBL_RELEASE_LIB}: \
+	$(wildcard extra/f2cblaslapack-release/**/*.c)
+
+	@sh -l scripts/f2cblaslapack.sh release
+
+${F2CBL_SCOREP_LIB}: \
+	$(wildcard extra/f2cblaslapack-scorep/**/*.c)
+
+	@sh -l scripts/f2cblaslapack.sh scorep
 
 # underlying rule compiling C++ code with Score-P
 ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp
-	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
+	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_SCOREP_LIB})
 
 # underlying rule compiling C code with Score-P
 ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.c
-	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS}
+	scorep ${SCOREP_FLAGS} ${CXX} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_SCOREP_LIB})
 
 # underlying rule compiling C++ code with PGprof
-${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.cpp
-	${CXX} ${PGPROF_FLAGS} -c -o $@ $< ${CXXFLAGS}
+${OBJDIR}/%.nvprof.o: ${SRCDIR}/%.cpp
+	${CXX} ${NVPROF_FLAGS} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_RELEASE_LIB})
 
 # underlying rule compiling C code with PGprof
-${OBJDIR}/%.pgprof.o: ${SRCDIR}/%.c
-	${CXX} ${PGPROF_FLAGS} -c -o $@ $< ${CXXFLAGS}
+${OBJDIR}/%.nvprof.o: ${SRCDIR}/%.c
+	${CXX} ${NVPROF_FLAGS} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_RELEASE_LIB})
 
 # underlying target compiling C++ code
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
-	${CXX} -c -o $@ $< ${CXXFLAGS}
+	${CXX} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_RELEASE_LIB})
 
 # underlying target compiling C code
 ${OBJDIR}/%.o: ${SRCDIR}/%.c
-	${CXX} -c -o $@ $< ${CXXFLAGS}
+	${CXX} -c -o $@ $< ${CXXFLAGS} \
+		-I $(subst lib/libpetsc.a,include,${PETSC_RELEASE_LIB})
 
 # rule to run PBS script in directory "runs"
 $(filter single-node-scaling-%,${RUNS}):
@@ -178,10 +222,10 @@ $(filter single-node-profiling-%,${RUNS}):
 		-v PROJFOLDER=${PROJFOLDER},EXEC=scorep-$(subst single-node-profiling-,,$@) \
 		runs/single-node-profiling.pbs
 
-$(filter single-node-pgprof-%,${RUNS}):
+$(filter single-node-nvprof-%,${RUNS}):
 	qsub -A ${PROJ} \
-		-v PROJFOLDER=${PROJFOLDER},EXEC=pgprof-$(subst single-node-pgprof-,,$@) \
-		runs/single-node-pgprof.pbs
+		-v PROJFOLDER=${PROJFOLDER},EXEC=nvprof-$(subst single-node-nvprof-,,$@) \
+		runs/single-node-nvprof.pbs
 
 $(filter multiple-node-scaling-%,${RUNS}):
 	qsub -A ${PROJ} \
@@ -202,7 +246,7 @@ clean-build:
 
 # clean everything from PETSc
 clean-petsc:
-	@rm -rf extra src/original src/openacc/*.c
+	@rm -rf extra src/original src/openacc/*.c *.log
 
 # clean everything
 clean-all: clean-build clean-petsc
