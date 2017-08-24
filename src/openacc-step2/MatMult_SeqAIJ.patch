@@ -16,7 +16,7 @@
 +    ierr = VecGetLocalSize(xx, &xSize); CHKERRQ(ierr);
 +
 +    // upload matrix if it does not exist on device
-+    # pragma acc enter data copyin(ii[:m+1]) wait
++    # pragma acc enter data copyin(ii[:m+1])
 +    # pragma acc enter data copyin(cols[:a->nz])
 +    # pragma acc enter data copyin(data[:a->nz])
 +

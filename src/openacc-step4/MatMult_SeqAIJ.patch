@@ -74,7 +74,7 @@
 +    // remaining rows
 +    # pragma acc kernels loop independent gang vector(32) async(bN+1) \
 +      present(ii[:m+1], cols[:a->nz], data[:a->nz], x[:xSize]) \
-+      copyout(y[offset:(m-offset)])
++      copyout(y[offset:(m-offset)]) if(offset<m)
 +    for (i=offset; i<m; i++) {
        n           = ii[i+1] - ii[i];
 -      aj          = a->j + ii[i];

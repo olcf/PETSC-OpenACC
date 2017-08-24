@@ -47,13 +47,10 @@
 +      offset += 1;
 +    }
 +
-+    // calculate number of remaining rows.
-+    PetscInt remain = m - offset;
-+
 +    // GPU kernels
 +    # pragma acc kernels loop independent gang vector(32) \
 +      present(ii[:m+1], cols[:a->nz], data[:a->nz], x[:xSize]) \
-+      copyout(y[offset:remain])
++      copyout(y[offset:m-offset])
 +    for (i=offset; i<m; i++) {
        n           = ii[i+1] - ii[i];
 -      aj          = a->j + ii[i];
