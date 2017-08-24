@@ -246,7 +246,7 @@ clean-build:
 
 # clean everything from PETSc
 clean-petsc:
-	@rm -rf extra src/original src/openacc/*.c *.log
+	@rm -rf extra src/original src/openacc-step*/*.c *.log
 
 # clean everything
 clean-all: clean-build clean-petsc
