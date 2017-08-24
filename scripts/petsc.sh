@@ -133,15 +133,15 @@ printf "done.\n"
 # go to PETSc source folder
 cd ${PETSC_DIR} || return
 
-# configure the release build
-printf "Configuring release build (see release_config.log for progress) ... "
-source ${SCRIPT_DIR}/petsc_configure_release.sh > release_config.log 2>&1
+# configure the build
+printf "Configuring ${1} build (see petsc-${1}-config.log for progress) ... "
+source ${SCRIPT_DIR}/petsc-${1}.sh > ${WORKING_DIR}/petsc-${1}-config.log 2>&1
 
-# check if the configuration for release build completed
-SUCCESS=`tail release_config.log | grep -c "Configure\ stage\ complete\."`
+# check if the configuration completed
+SUCCESS=`tail  ${WORKING_DIR}/petsc-${1}-config.log | grep -c "Configure\ stage\ complete\."`
 if [[ ${SUCCESS} = "0" ]];
 then
-    printf "Release build failed!!\n"
+    printf "${1} build failed!!\n"
     return 1
 fi
 
@@ -155,11 +155,13 @@ printf "done.\n"
 # go back to PETSc top folder
 cd ${PETSC_DIR} || return
 
-# make the release build
-printf "Making release build ... "
+# make the build
+printf "Making ${1} build ... "
 make \
     PETSC_DIR=${PETSC_DIR} \
-    PETSC_ARCH=RELEASE-TITAN all > release_make.log 2>&1 || return
+    PETSC_ARCH=`grep -Po "(?<=PETSC_ARCH=)[[:graph:]]*" ${SCRIPT_DIR}/petsc-${1}.sh` \
+    all \
+    > ${WORKING_DIR}/petsc-${1}-make.log 2>&1 || return
 printf "done.\n"
 
 

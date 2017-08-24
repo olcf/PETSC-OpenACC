@@ -2,7 +2,7 @@
 
 ./configure                                             \
     \
-    --PETSC_ARCH=RELEASE-TITAN                          \
+    --PETSC_ARCH=SCOREP-TITAN                           \
     --with-precision=double                             \
     --with-clanguage=C                                  \
     --with-shared-libraries=0                           \
@@ -11,13 +11,13 @@
     \
     --with-cc="cc"                                      \
     --with-clib-autodetect=0                            \
-    --CFLAGS="-w -tp=bulldozer-64 -O3 -fast -Mnodwarf"  \
-    --COPTFLAGS=""                                      \
+    --CFLAGS="-w -Minstrument"                          \
+    --COPTFLAGS="-tp=bulldozer-64 -O3 -fast -Mnodwarf"  \
     \
     --with-cxx="CC"                                     \
     --with-cxxlib-autodetect=0                          \
-    --CXXFLAGS="-w -tp=bulldozer-64 -O3 -fast -Mnodwarf"\
-    --CXXOPTFLAGS=""                                    \
+    --CXXFLAGS="-w --gnu -Minstrument"                  \
+    --CXXOPTFLAGS="-tp=bulldozer-64 -O3 -fast -Mnodwarf" \
     \
     --with-fc=0                                         \
     --with-fortran-datatypes=0                          \
@@ -34,8 +34,6 @@
     --with-gcov=0                                       \
     --with-dependencies=0                               \
     --with-log=0                                        \
-    \
-    --download-f2cblaslapack=yes                        \
     \
     --known-has-attribute-aligned=1                     \
     --known-mpi-int64_t=0                               \
@@ -64,4 +62,6 @@
     --with-scalar-type=real                             \
     --with-etags=0                                      \
     --with-x=0                                          \
-    --with-ssl=0 
+    --with-ssl=0                                        \
+    \
+    --with-blas-lapack-dir=../f2cblaslapack-scorep
