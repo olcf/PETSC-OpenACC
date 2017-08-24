@@ -10,7 +10,7 @@
  #undef __FUNCT__
  #define __FUNCT__ "MatMult_SeqAIJ"
  PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
-@@ -46,14 +49,58 @@
+@@ -46,14 +49,55 @@
      aa   = a->a;
      fortranmultaij_(&m,x,ii,aj,aa,y);
  #else
