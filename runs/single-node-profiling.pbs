@@ -49,10 +49,12 @@ export SCOREP_ENABLE_PROFILING=true
 export SCOREP_SAMPLING_EVENTS=PAPI_TOT_CYC@1000000
 export SCOREP_ENABLE_TRACING=true
 export SCOREP_ENABLE_UNWINDING=true
-export SCOREP_TOTAL_MEMORY=100M
-export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=33
-export SCOREP_CUDA_ENABLE=yes
-export SCOREP_OPENACC_ENABLE=yes
+export SCOREP_TOTAL_MEMORY=512M
+export SCOREP_PROFILING_MAX_CALLPATH_DEPTH=50
+export SCOREP_CUDA_ENABLE='kernel','kernel_serial','kernel_counter','memcpy'
+export SCOREP_CUDA_BUFFER=512M
+export SCOREP_CUDA_BUFFER_CHUNK=8M
+export SCOREP_OPENACC_ENABLE='regions','wait','enqueue','device_alloc','kernel_properties','variable_names'
 
 # export the variable for using GPU with multiple MPI processes
 export CRAY_CUDA_PROXY=1

@@ -10,14 +10,13 @@
 # check if variable PROJFOLDER is set and if ${MEMBERWORK}/${PROJFOLDER} is valid
 if [[ ! -d ${MEMBERWORK}/${PROJFOLDER:?PROJFOLDER should be set first} ]];
 then
-    printf "${MEMBEROWRK}/${PROJFOLDER} is not usable!\n"
+    printf "${MEMBERWORK}/${PROJFOLDER} is not usable!\n"
     printf "Please check both MEMBERWORK and PROJFOLDER are set correctly!\n"
     exit
 fi
 
 # source environment variables
 source ${PBS_O_WORKDIR}/scripts/set_up_environment.sh
-module switch pgi pgi/17.5.0
 
 # the name to this run case
 RUN=`basename "${PBS_JOBNAME}" ".pbs"`
@@ -52,6 +51,18 @@ rsync -Pravq ${RUN_BASE}/../configs ${MEMBERWORK}/${PROJFOLDER}
 unset CUDA_LAUNCH_BLOCKING
 export CRAY_CUDA_PROXY=1
 
+# PMI_NO_FORK
+export PMI_NO_FORK=1
+
+# PGI ACC variables
+export PGI_ACC_CUDA_PROFSTOP=1
+
+# use $MEMBERWORK space as tmp folder
+export TMPDIR=${MEMBERWORK}/${PROJFOLDER}
+
+# nvprof may use some dynamic library at runtime
+export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+
 # start runs
 echo "Single Node Profiling: ${EXEC}" > ${LOG}
 echo "================================================" >> ${LOG}
@@ -61,14 +72,13 @@ echo "" >> ${LOG}
 
 echo "16 Cores" >> ${LOG}
 echo "--------" >> ${LOG}
-aprun -n 16 \
-    pgprof \
+aprun -b -n 16 \
+    nvprof \
     --export-profile \
         ${MEMBERWORK}/${PROJFOLDER}/${RUN}/${PROF_DIR}/rank.%q{ALPS_APP_PE}.nvvp \
-    --cpu-profiling on \
-    --cpu-profiling-scope function \
-    --openacc-profiling on \
+    --stream-name rank%q{ALPS_APP_PE}-stream%i \
     --concurrent-kernels on \
+    --profile-api-trace none \
     ${MEMBERWORK}/${PROJFOLDER}/bin/${EXEC} \
         -da_grid_x 300 \
         -da_grid_y 300 \
