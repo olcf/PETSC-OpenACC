@@ -64,4 +64,4 @@
     --with-x=0                                          \
     --with-ssl=0                                        \
     \
-    --with-blas-lapack-dir=../f2cblaslapack-scorep
+    --with-blas-lapack-lib=\[${WORKING_DIR}/extra/f2cblaslapack-scorep/libf2clapack.a,${WORKING_DIR}/extra/f2cblaslapack-scorep/libf2cblas.a\]
