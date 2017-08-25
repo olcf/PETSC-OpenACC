@@ -162,24 +162,24 @@ ${PETSC_RELEASE_LIB}: ${F2CBL_RELEASE_LIB} \
 	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
 
-	@sh -l scripts/petsc.sh release
+	@bash -l scripts/petsc.sh release
 
 ${PETSC_SCOREP_LIB}: ${F2CBL_SCOREP_LIB} \
 	$(wildcard extra/petsc-3.7.6/src/**/*.c) \
 	$(wildcard extra/petsc-3.7.6/src/**/*.h)
 
-	@sh -l scripts/petsc.sh scorep
+	@bash -l scripts/petsc.sh scorep
 
 # target for building f2cblaslapack
 ${F2CBL_RELEASE_LIB}: \
 	$(wildcard extra/f2cblaslapack-release/**/*.c)
 
-	@sh -l scripts/f2cblaslapack.sh release
+	@bash -l scripts/f2cblaslapack.sh release
 
 ${F2CBL_SCOREP_LIB}: \
 	$(wildcard extra/f2cblaslapack-scorep/**/*.c)
 
-	@sh -l scripts/f2cblaslapack.sh scorep
+	@bash -l scripts/f2cblaslapack.sh scorep
 
 # underlying rule compiling C++ code with Score-P
 ${OBJDIR}/%.scorep.o: ${SRCDIR}/%.cpp

@@ -1,4 +1,4 @@
-#! /bin/sh -l
+#! /bin/bash -l
 #
 # f2cblaslapack.sh
 # Copyright (C) 2017 Pi-Yueh Chuang <pychuang@gwu.edu>

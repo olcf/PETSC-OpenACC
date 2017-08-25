@@ -1,4 +1,4 @@
-#! /bin/sh -l
+#! /bin/bash -l
 #
 # petsc.sh
 # Copyright (C) 2017 Pi-Yueh Chuang <pychuang@gwu.edu>

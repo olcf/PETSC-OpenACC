@@ -1,11 +1,4 @@
-#! /bin/sh
-#
-# f2cblaslapack-release.sh
-# Copyright (C) 2017 Pi-Yueh Chuang <pychuang@gwu.edu>
-#
-# Distributed under terms of the MIT license.
-#
-
+# use `source`. Do not use a new shell.
 
 sed -i "/include\ \${PETSC_DIR}\/conf\/base/d" makefile || return
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+# use `source`. Do not use a new shell.
 
 ./configure                                             \
     \
